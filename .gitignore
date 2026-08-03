@@ -1,0 +1,5 @@
+.build/
+dist/
+assets/Leash.iconset/
+assets/Leash-1024.png
+.DS_Store

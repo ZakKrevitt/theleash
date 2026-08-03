@@ -1,0 +1,290 @@
+import AppKit
+import ApplicationServices
+import Combine
+import LeashCore
+
+@MainActor
+final class LeashCoordinator: NSObject, ObservableObject {
+    @Published private(set) var state: LeashState
+    @Published private(set) var runningApps: [AppIdentity] = []
+    @Published private(set) var lastExternalApp: AppIdentity?
+    @Published private(set) var now = Date()
+    @Published var selectedBundleIdentifiers: Set<String> = []
+    @Published var taskDraft = ""
+    @Published var doneWhenDraft = ""
+    @Published var durationMinutes = 25
+    @Published var mode: LeashMode = .nudge
+    @Published var formError: String?
+
+    private let store = StateStore()
+    private let overlay = OverlayController()
+    private let workspace = NSWorkspace.shared
+    private var clock: Timer?
+    private var isPullingBack = false
+
+    private var leashBundleIdentifier: String {
+        Bundle.main.bundleIdentifier ?? "com.zakkrevitt.leash"
+    }
+
+    override init() {
+        state = store.load()
+        super.init()
+
+        let center = workspace.notificationCenter
+        center.addObserver(
+            self,
+            selector: #selector(applicationActivated(_:)),
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
+        center.addObserver(
+            self,
+            selector: #selector(applicationsChanged(_:)),
+            name: NSWorkspace.didLaunchApplicationNotification,
+            object: nil
+        )
+        center.addObserver(
+            self,
+            selector: #selector(applicationsChanged(_:)),
+            name: NSWorkspace.didTerminateApplicationNotification,
+            object: nil
+        )
+
+        refreshRunningApps()
+        rememberFrontmostExternalApp()
+        startClock()
+        restoreSessionIfNeeded()
+    }
+
+    deinit {
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+        clock?.invalidate()
+    }
+
+    var session: FocusSession? { state.session }
+    var parked: [ParkedApp] { state.parked }
+
+    var remainingText: String {
+        guard let session else { return "0:00" }
+        return SessionEngine.remainingText(for: session, now: now)
+    }
+
+    var accessibilityTrusted: Bool {
+        AXIsProcessTrusted()
+    }
+
+    func requestAccessibility() {
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        _ = AXIsProcessTrustedWithOptions(options)
+    }
+
+    func toggleAllowed(_ app: AppIdentity) {
+        if selectedBundleIdentifiers.contains(app.bundleIdentifier) {
+            selectedBundleIdentifiers.remove(app.bundleIdentifier)
+        } else {
+            selectedBundleIdentifiers.insert(app.bundleIdentifier)
+        }
+    }
+
+    func isSelected(_ app: AppIdentity) -> Bool {
+        selectedBundleIdentifiers.contains(app.bundleIdentifier) ||
+            app.bundleIdentifier == lastExternalApp?.bundleIdentifier
+    }
+
+    func icon(for app: AppIdentity) -> NSImage {
+        let running = workspace.runningApplications.first { $0.bundleIdentifier == app.bundleIdentifier }
+        return running?.icon ?? NSWorkspace.shared.icon(for: .application)
+    }
+
+    func startSession() {
+        formError = nil
+        do {
+            let nextSession = try SessionEngine.start(
+                task: taskDraft,
+                doneWhen: doneWhenDraft,
+                durationMinutes: durationMinutes,
+                mode: mode,
+                anchor: lastExternalApp,
+                allowedBundleIdentifiers: selectedBundleIdentifiers,
+                now: Date()
+            )
+            state.session = nextSession
+            state.lastStopReason = nil
+            save()
+            overlay.start(
+                task: nextSession.task,
+                remaining: SessionEngine.remainingText(for: nextSession)
+            )
+        } catch {
+            formError = error.localizedDescription
+        }
+    }
+
+    func endSession(reason: String = "stopped") {
+        state.session = nil
+        state.lastStopReason = reason
+        save()
+        overlay.stop()
+        rememberFrontmostExternalApp()
+    }
+
+    func returnToTask() {
+        guard let anchor = state.session?.anchor else { return }
+        activate(anchor)
+    }
+
+    func allowCurrentApp() {
+        guard var session = state.session,
+              let running = workspace.frontmostApplication,
+              let app = identity(for: running),
+              app.bundleIdentifier != leashBundleIdentifier else { return }
+        session.allowedBundleIdentifiers.insert(app.bundleIdentifier)
+        state.session = session
+        save()
+    }
+
+    func removeParked(_ item: ParkedApp) {
+        state.parked.removeAll { $0.id == item.id }
+        save()
+    }
+
+    func clearParked() {
+        state.parked.removeAll()
+        save()
+    }
+
+    @objc private func applicationActivated(_ notification: Notification) {
+        refreshRunningApps()
+        guard let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+              let app = identity(for: application),
+              app.bundleIdentifier != leashBundleIdentifier else { return }
+
+        guard let session = state.session else {
+            lastExternalApp = app
+            selectedBundleIdentifiers.insert(app.bundleIdentifier)
+            return
+        }
+
+        let decision = SessionEngine.decision(
+            for: app,
+            session: session,
+            leashBundleIdentifier: leashBundleIdentifier
+        )
+        guard decision != .allow, !isPullingBack else { return }
+
+        SessionEngine.park(
+            app: app,
+            windowTitle: focusedWindowTitle(for: application.processIdentifier),
+            state: &state
+        )
+        save()
+        overlay.showCatch(
+            appName: app.name,
+            task: session.task,
+            pulledBack: decision == .pullBack
+        )
+
+        guard decision == .pullBack else { return }
+        isPullingBack = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            guard let self else { return }
+            application.hide()
+            self.activate(session.anchor)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                self.isPullingBack = false
+            }
+        }
+    }
+
+    @objc private func applicationsChanged(_ notification: Notification) {
+        refreshRunningApps()
+    }
+
+    private func startClock() {
+        clock = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.tick() }
+        }
+        if let clock { RunLoop.main.add(clock, forMode: .common) }
+    }
+
+    private func tick() {
+        now = Date()
+        guard let session = state.session else { return }
+        if SessionEngine.isExpired(session, now: now) {
+            endSession(reason: "complete")
+            return
+        }
+        overlay.update(task: session.task, remaining: remainingText)
+    }
+
+    private func restoreSessionIfNeeded() {
+        guard let session = state.session else { return }
+        if SessionEngine.isExpired(session) {
+            endSession(reason: "complete")
+        } else {
+            overlay.start(task: session.task, remaining: SessionEngine.remainingText(for: session))
+        }
+    }
+
+    private func rememberFrontmostExternalApp() {
+        guard let application = workspace.frontmostApplication,
+              let app = identity(for: application),
+              app.bundleIdentifier != leashBundleIdentifier else { return }
+        lastExternalApp = app
+        selectedBundleIdentifiers.insert(app.bundleIdentifier)
+    }
+
+    private func refreshRunningApps() {
+        runningApps = workspace.runningApplications
+            .filter { !$0.isTerminated && $0.activationPolicy == .regular }
+            .compactMap(identity(for:))
+            .filter { $0.bundleIdentifier != leashBundleIdentifier }
+            .reduce(into: [String: AppIdentity]()) { result, app in
+                result[app.bundleIdentifier] = app
+            }
+            .values
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private func identity(for application: NSRunningApplication) -> AppIdentity? {
+        guard let bundleIdentifier = application.bundleIdentifier,
+              let name = application.localizedName,
+              !name.isEmpty else { return nil }
+        return AppIdentity(bundleIdentifier: bundleIdentifier, name: name)
+    }
+
+    private func activate(_ app: AppIdentity) {
+        let candidates = NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleIdentifier)
+        guard let application = candidates.first else {
+            if let url = workspace.urlForApplication(withBundleIdentifier: app.bundleIdentifier) {
+                workspace.openApplication(at: url, configuration: .init())
+            }
+            return
+        }
+        application.activate(options: [.activateAllWindows])
+    }
+
+    private func focusedWindowTitle(for processIdentifier: pid_t) -> String? {
+        guard AXIsProcessTrusted() else { return nil }
+        let application = AXUIElementCreateApplication(processIdentifier)
+        var focusedWindow: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            application,
+            kAXFocusedWindowAttribute as CFString,
+            &focusedWindow
+        ) == .success,
+        let focusedWindow else { return nil }
+
+        var title: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            focusedWindow as! AXUIElement,
+            kAXTitleAttribute as CFString,
+            &title
+        ) == .success else { return nil }
+        return title as? String
+    }
+
+    private func save() {
+        store.save(state)
+    }
+}
