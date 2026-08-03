@@ -58,6 +58,18 @@ private struct SetupView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 17) {
+            if coordinator.state.lastStopReason == "complete" {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color(red: 0.25, green: 0.49, blue: 0.23))
+                    Text("Task complete. Leash released.")
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
+                .background(Palette.acid.opacity(0.42), in: RoundedRectangle(cornerRadius: 10))
+            }
+
             Text("What are you doing?")
                 .font(.system(size: 28, weight: .bold))
                 .tracking(-1)
@@ -283,8 +295,17 @@ private struct ActiveSessionView: View {
                 }
                 .overlay(RoundedRectangle(cornerRadius: 16).stroke(Palette.ink, lineWidth: 1.5))
 
-                Button("Return to task") { coordinator.returnToTask() }
-                    .buttonStyle(PrimaryButtonStyle())
+                HStack(spacing: 9) {
+                    Button {
+                        coordinator.completeSession()
+                    } label: {
+                        Label("Done", systemImage: "checkmark")
+                    }
+                    .buttonStyle(CompletionButtonStyle())
+
+                    Button("Return to task") { coordinator.returnToTask() }
+                        .buttonStyle(PrimaryButtonStyle())
+                }
 
                 if let current = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
                    !session.allowedBundleIdentifiers.contains(current),
@@ -371,6 +392,18 @@ private struct PrimaryButtonStyle: ButtonStyle {
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity, minHeight: 42)
             .background(configuration.isPressed ? Palette.muted : Palette.ink)
+            .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+    }
+}
+
+private struct CompletionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .bold))
+            .foregroundStyle(Palette.ink)
+            .frame(maxWidth: .infinity, minHeight: 42)
+            .background(configuration.isPressed ? Palette.acid.opacity(0.62) : Palette.acid)
+            .overlay(RoundedRectangle(cornerRadius: 11).stroke(Palette.ink, lineWidth: 1))
             .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
 }

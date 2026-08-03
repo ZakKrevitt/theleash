@@ -12,15 +12,19 @@ Leash is a native, local-first macOS menu bar app for short focus sessions. It w
 4. Select any other apps the task needs.
 5. Choose an intervention and start.
 
-The previously active app becomes the anchor. A small companion follows the cursor across apps, desktops, and full-screen spaces with the task and remaining time.
+The previously active app becomes the anchor. The companion stays hidden while you work inside an allowed app. It appears beside the cursor only when Leash catches a drift or confirms that you finished.
 
 ### Catch me
 
-Leash notices an unrelated app, shows what happened beside the cursor, and saves the distraction in Later. You stay in control.
+Leash notices an unrelated app, shows what happened beside the cursor, and saves the distraction in Later. The prompt offers **Done** and **Back to task**, so leaving the work becomes a natural completion checkpoint.
 
 ### Pull me back
 
 Leash saves and hides the unrelated app, then reactivates the anchor app. Hiding is reversible and does not quit the app or discard its work.
+
+### Finishing
+
+Click **Done** in the active session panel when the definition of done is true. Leash records a successful completion, releases the session, and confirms it beside the cursor. A timer ending only ends the timebox. It does not claim that the task itself is complete.
 
 ## Install
 

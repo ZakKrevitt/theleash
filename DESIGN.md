@@ -2,7 +2,7 @@
 
 ## Character
 
-Leash should feel like a calm physical tool, not a productivity dashboard. The floating companion stays compact and legible. Interventions are direct, brief, and free of guilt.
+Leash should feel like a calm physical tool, not a productivity dashboard. The floating companion is absent while the user is working. Interventions are direct, brief, and free of guilt.
 
 ## Colors
 
@@ -21,9 +21,9 @@ Use the macOS system sans serif. Task titles use bold weight and tight tracking.
 
 - Controls: 10 to 12 point continuous corners
 - Session card: 16 point continuous corners
-- Cursor companion: capsule while passive, 16 point card while intervening
+- Cursor companion: 16 point card shown only for interventions and completion
 - Borders: one point neutral or 1.5 point ink for selected states
 
 ## Motion
 
-The companion follows the pointer without spring effects. Drift feedback remains visible for 3.5 seconds. Pull-back waits 350 milliseconds before hiding the distraction so the intervention is perceptible.
+Drift feedback appears beside the pointer for 3.5 seconds with Done and Back to task actions, then disappears. Completion confirmation remains for 2.8 seconds. Pull-back waits 350 milliseconds before hiding the distraction so the intervention is perceptible.

@@ -128,6 +128,17 @@ final class LeashCoordinator: NSObject, ObservableObject {
         rememberFrontmostExternalApp()
     }
 
+    func completeSession() {
+        guard let session = state.session else { return }
+        SessionEngine.complete(state: &state)
+        save()
+        taskDraft = ""
+        doneWhenDraft = ""
+        selectedBundleIdentifiers.removeAll()
+        overlay.showCompletion(task: session.task)
+        rememberFrontmostExternalApp()
+    }
+
     func returnToTask() {
         guard let anchor = state.session?.anchor else { return }
         activate(anchor)
@@ -170,7 +181,11 @@ final class LeashCoordinator: NSObject, ObservableObject {
             session: session,
             leashBundleIdentifier: leashBundleIdentifier
         )
-        guard decision != .allow, !isPullingBack else { return }
+        if !SessionEngine.shouldShowCompanion(for: decision) {
+            if !isPullingBack { overlay.hide() }
+            return
+        }
+        guard !isPullingBack else { return }
 
         SessionEngine.park(
             app: app,
@@ -181,13 +196,22 @@ final class LeashCoordinator: NSObject, ObservableObject {
         overlay.showCatch(
             appName: app.name,
             task: session.task,
-            pulledBack: decision == .pullBack
+            pulledBack: decision == .pullBack,
+            onComplete: { [weak self] in self?.completeSession() },
+            onReturn: { [weak self] in
+                self?.overlay.hide()
+                self?.returnToTask()
+            }
         )
 
         guard decision == .pullBack else { return }
         isPullingBack = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
             guard let self else { return }
+            guard self.state.session?.id == session.id else {
+                self.isPullingBack = false
+                return
+            }
             application.hide()
             self.activate(session.anchor)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
@@ -211,7 +235,7 @@ final class LeashCoordinator: NSObject, ObservableObject {
         now = Date()
         guard let session = state.session else { return }
         if SessionEngine.isExpired(session, now: now) {
-            endSession(reason: "complete")
+            endSession(reason: "time-ended")
             return
         }
         overlay.update(task: session.task, remaining: remainingText)
@@ -220,7 +244,7 @@ final class LeashCoordinator: NSObject, ObservableObject {
     private func restoreSessionIfNeeded() {
         guard let session = state.session else { return }
         if SessionEngine.isExpired(session) {
-            endSession(reason: "complete")
+            endSession(reason: "time-ended")
         } else {
             overlay.start(task: session.task, remaining: SessionEngine.remainingText(for: session))
         }

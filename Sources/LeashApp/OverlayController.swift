@@ -8,6 +8,9 @@ final class OverlayModel: ObservableObject {
     @Published var remaining = "0:00"
     @Published var caughtApp: String?
     @Published var modeLabel = ""
+    @Published var isCompletion = false
+    var onComplete: (() -> Void)?
+    var onReturn: (() -> Void)?
 }
 
 struct LeashOverlayView: View {
@@ -15,7 +18,25 @@ struct LeashOverlayView: View {
 
     var body: some View {
         Group {
-            if let caughtApp = model.caughtApp {
+            if model.isCompletion {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 7) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(Color(red: 0.25, green: 0.49, blue: 0.23))
+                        Text("Task complete")
+                            .font(.system(size: 13, weight: .bold))
+                    }
+                    Text(model.task)
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                    Text("Leash released")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 15)
+                .padding(.vertical, 11)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else if let caughtApp = model.caughtApp {
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 7) {
                         Circle()
@@ -30,6 +51,13 @@ struct LeashOverlayView: View {
                     Text(model.task)
                         .font(.system(size: 12, weight: .semibold))
                         .lineLimit(1)
+                    HStack(spacing: 7) {
+                        Button("Done") { model.onComplete?() }
+                            .buttonStyle(OverlayCompletionButtonStyle())
+                        Button("Back to task") { model.onReturn?() }
+                            .buttonStyle(OverlayReturnButtonStyle())
+                    }
+                    .padding(.top, 4)
                 }
                 .padding(.horizontal, 15)
                 .padding(.vertical, 12)
@@ -51,7 +79,7 @@ struct LeashOverlayView: View {
         }
         .foregroundStyle(Color(red: 0.12, green: 0.13, blue: 0.11))
         .background(
-            RoundedRectangle(cornerRadius: model.caughtApp == nil ? 18 : 16, style: .continuous)
+            RoundedRectangle(cornerRadius: model.caughtApp == nil && !model.isCompletion ? 18 : 16, style: .continuous)
                 .fill(Color(red: 0.98, green: 0.97, blue: 0.93).opacity(0.97))
                 .stroke(Color.black.opacity(0.16), lineWidth: 1)
         )
@@ -100,46 +128,97 @@ final class OverlayController {
     }
 
     func start(task: String, remaining: String) {
+        resetWorkItem?.cancel()
         model.task = task
         model.remaining = remaining
         model.caughtApp = nil
+        model.isCompletion = false
+        model.onComplete = nil
+        model.onReturn = nil
+        panel.ignoresMouseEvents = true
         panel.setContentSize(NSSize(width: 280, height: 42))
-        reposition()
-        panel.orderFrontRegardless()
+        panel.orderOut(nil)
     }
 
     func update(task: String, remaining: String) {
         model.task = task
         model.remaining = remaining
-        reposition()
+        if panel.isVisible { reposition() }
     }
 
-    func showCatch(appName: String, task: String, pulledBack: Bool) {
+    func showCatch(
+        appName: String,
+        task: String,
+        pulledBack: Bool,
+        onComplete: @escaping () -> Void,
+        onReturn: @escaping () -> Void
+    ) {
         resetWorkItem?.cancel()
         model.task = task
         model.caughtApp = appName
+        model.isCompletion = false
         model.modeLabel = pulledBack ? "Pulled you back to the task" : "Does this belong inside the task?"
-        panel.setContentSize(NSSize(width: 330, height: 92))
+        model.onComplete = onComplete
+        model.onReturn = onReturn
+        panel.ignoresMouseEvents = false
+        panel.setContentSize(NSSize(width: 350, height: 132))
         reposition()
         panel.orderFrontRegardless()
 
         let workItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
             self.model.caughtApp = nil
-            self.panel.setContentSize(NSSize(width: 280, height: 42))
-            self.reposition()
+            self.model.onComplete = nil
+            self.model.onReturn = nil
+            self.panel.ignoresMouseEvents = true
+            self.panel.orderOut(nil)
         }
         resetWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.5, execute: workItem)
     }
 
+    func showCompletion(task: String) {
+        resetWorkItem?.cancel()
+        model.task = task
+        model.caughtApp = nil
+        model.isCompletion = true
+        model.onComplete = nil
+        model.onReturn = nil
+        panel.ignoresMouseEvents = true
+        panel.setContentSize(NSSize(width: 300, height: 84))
+        reposition()
+        panel.orderFrontRegardless()
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.model.isCompletion = false
+            self.panel.orderOut(nil)
+        }
+        resetWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.8, execute: workItem)
+    }
+
+    func hide() {
+        guard !model.isCompletion else { return }
+        resetWorkItem?.cancel()
+        model.caughtApp = nil
+        model.onComplete = nil
+        model.onReturn = nil
+        panel.ignoresMouseEvents = true
+        panel.orderOut(nil)
+    }
+
     func stop() {
         resetWorkItem?.cancel()
+        model.caughtApp = nil
+        model.isCompletion = false
+        model.onComplete = nil
+        model.onReturn = nil
+        panel.ignoresMouseEvents = true
         panel.orderOut(nil)
     }
 
     func reposition() {
-        guard panel.isVisible || !model.task.isEmpty else { return }
         let cursor = NSEvent.mouseLocation
         let screen = NSScreen.screens.first { NSMouseInRect(cursor, $0.frame, false) } ?? NSScreen.main
         guard let visibleFrame = screen?.visibleFrame else { return }
@@ -148,5 +227,29 @@ final class OverlayController {
         origin.x = min(max(origin.x, visibleFrame.minX + 8), visibleFrame.maxX - panel.frame.width - 8)
         origin.y = min(max(origin.y, visibleFrame.minY + 8), visibleFrame.maxY - panel.frame.height - 8)
         panel.setFrameOrigin(origin)
+    }
+}
+
+private struct OverlayCompletionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(Color(red: 0.12, green: 0.13, blue: 0.11))
+            .padding(.horizontal, 13)
+            .frame(height: 28)
+            .background(Color(red: 0.85, green: 0.98, blue: 0.39).opacity(configuration.isPressed ? 0.65 : 1))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+private struct OverlayReturnButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 13)
+            .frame(height: 28)
+            .background(Color(red: 0.12, green: 0.13, blue: 0.11).opacity(configuration.isPressed ? 0.72 : 1))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }

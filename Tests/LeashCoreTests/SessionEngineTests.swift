@@ -65,6 +65,12 @@ final class SessionEngineTests: XCTestCase {
         )
     }
 
+    func testCompanionOnlyAppearsForAnIntervention() {
+        XCTAssertFalse(SessionEngine.shouldShowCompanion(for: .allow))
+        XCTAssertTrue(SessionEngine.shouldShowCompanion(for: .nudge))
+        XCTAssertTrue(SessionEngine.shouldShowCompanion(for: .pullBack))
+    }
+
     func testParkingDeduplicatesAndCountsEveryCatch() throws {
         let session = try SessionEngine.start(
             task: "Work", durationMinutes: 25, mode: .nudge, anchor: anchor
@@ -87,5 +93,17 @@ final class SessionEngineTests: XCTestCase {
 
         XCTAssertEqual(SessionEngine.remainingText(for: session, now: now.addingTimeInterval(0.2)), "1:00")
         XCTAssertTrue(SessionEngine.isExpired(session, now: now.addingTimeInterval(60)))
+    }
+
+    func testCompleteEndsSessionAndRecordsSuccessfulOutcome() throws {
+        let session = try SessionEngine.start(
+            task: "Work", durationMinutes: 25, mode: .nudge, anchor: anchor
+        )
+        var state = LeashState(session: session)
+
+        SessionEngine.complete(state: &state)
+
+        XCTAssertNil(state.session)
+        XCTAssertEqual(state.lastStopReason, "complete")
     }
 }

@@ -61,6 +61,10 @@ public enum SessionEngine {
         return session.mode == .lock ? .pullBack : .nudge
     }
 
+    public static func shouldShowCompanion(for decision: DriftDecision) -> Bool {
+        decision != .allow
+    }
+
     public static func remainingText(for session: FocusSession, now: Date = Date()) -> String {
         let totalSeconds = max(0, Int(ceil(session.endsAt.timeIntervalSince(now))))
         return String(format: "%d:%02d", totalSeconds / 60, totalSeconds % 60)
@@ -68,6 +72,11 @@ public enum SessionEngine {
 
     public static func isExpired(_ session: FocusSession, now: Date = Date()) -> Bool {
         session.endsAt <= now
+    }
+
+    public static func complete(state: inout LeashState) {
+        state.session = nil
+        state.lastStopReason = "complete"
     }
 
     public static func park(
