@@ -16,16 +16,46 @@ struct LeashMenuView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            if coordinator.session == nil {
-                SetupView(coordinator: coordinator)
-            } else {
+            if coordinator.session != nil {
                 ActiveSessionView(coordinator: coordinator)
+            } else if !coordinator.hasCompletedOnboarding {
+                OnboardingView(coordinator: coordinator)
+            } else {
+                SetupView(coordinator: coordinator)
             }
+            footer
         }
         .frame(width: 390)
         .background(Palette.paper)
         .foregroundStyle(Palette.ink)
         .preferredColorScheme(.light)
+    }
+
+    private var footer: some View {
+        HStack(spacing: 10) {
+            if coordinator.session != nil {
+                Button("Release now") { coordinator.releaseSession() }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Palette.accent)
+                Text("⌃⌥⌘L")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Palette.muted)
+            } else {
+                Text("v\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev")")
+                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Palette.muted)
+            }
+            Spacer()
+            Button("Quit Leash") { coordinator.quitApplication() }
+                .buttonStyle(.plain)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Palette.muted)
+        }
+        .padding(.horizontal, 20)
+        .frame(height: 36)
+        .background(Palette.panel.opacity(0.72))
+        .overlay(alignment: .top) { Divider() }
     }
 
     private var header: some View {
@@ -53,6 +83,84 @@ struct LeashMenuView: View {
     }
 }
 
+private struct OnboardingView: View {
+    @ObservedObject var coordinator: LeashCoordinator
+    @State private var includeWindowTitles = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 7) {
+                Text("A boundary for your attention.")
+                    .font(.system(size: 27, weight: .bold))
+                    .tracking(-0.8)
+                Text("Leash notices when you leave the apps chosen for a task, then helps you return.")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(spacing: 11) {
+                onboardingRow(
+                    icon: "eye.slash",
+                    title: "Quiet while you work",
+                    detail: "Nothing follows your pointer inside an allowed app."
+                )
+                onboardingRow(
+                    icon: "checkmark.circle",
+                    title: "You decide when it is done",
+                    detail: "Use Done when the task is complete. A timer ending only releases the timebox."
+                )
+                onboardingRow(
+                    icon: "lock.shield",
+                    title: "Local and private",
+                    detail: "No screenshots, accounts, analytics, or network requests."
+                )
+            }
+
+            Toggle(isOn: $includeWindowTitles) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Remember focused window titles")
+                        .font(.system(size: 12, weight: .bold))
+                    Text("Optional. macOS will ask for Accessibility permission.")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Palette.muted)
+                }
+            }
+            .toggleStyle(.switch)
+
+            Button("Continue") {
+                coordinator.finishOnboarding(requestAccessibility: includeWindowTitles)
+            }
+            .buttonStyle(PrimaryButtonStyle())
+
+            Text("Emergency release: \(ReleaseHotKey.displayName)")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Palette.muted)
+                .frame(maxWidth: .infinity, alignment: .center)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 20)
+    }
+
+    private func onboardingRow(icon: String, title: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: 11) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .bold))
+                .frame(width: 28, height: 28)
+                .background(Palette.acid, in: RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 12, weight: .bold))
+                Text(detail)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+}
+
 private struct SetupView: View {
     @ObservedObject var coordinator: LeashCoordinator
 
@@ -68,6 +176,26 @@ private struct SetupView: View {
                 .padding(.horizontal, 12)
                 .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
                 .background(Palette.acid.opacity(0.42), in: RoundedRectangle(cornerRadius: 10))
+            } else if coordinator.state.lastStopReason == "anchor-closed" {
+                HStack(spacing: 8) {
+                    Image(systemName: "anchor.circle.fill")
+                        .foregroundStyle(Palette.accent)
+                    Text("Anchor app closed. Leash released.")
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
+                .background(Palette.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
+            } else if coordinator.state.lastStopReason == "emergency-release" {
+                HStack(spacing: 8) {
+                    Image(systemName: "link.badge.minus")
+                        .foregroundStyle(Palette.muted)
+                    Text("Leash released with the safety shortcut.")
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
+                .background(Palette.panel, in: RoundedRectangle(cornerRadius: 10))
             }
 
             Text("What are you doing?")

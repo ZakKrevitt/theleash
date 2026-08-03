@@ -106,4 +106,25 @@ final class SessionEngineTests: XCTestCase {
         XCTAssertNil(state.session)
         XCTAssertEqual(state.lastStopReason, "complete")
     }
+
+    func testReleaseEndsSessionAndRecordsReason() throws {
+        let session = try SessionEngine.start(
+            task: "Work", durationMinutes: 25, mode: .nudge, anchor: anchor
+        )
+        var state = LeashState(session: session)
+
+        SessionEngine.release(state: &state, reason: "emergency-release")
+
+        XCTAssertNil(state.session)
+        XCTAssertEqual(state.lastStopReason, "emergency-release")
+    }
+
+    func testAnchorTerminationOnlyReleasesMatchingSession() throws {
+        let session = try SessionEngine.start(
+            task: "Work", durationMinutes: 25, mode: .nudge, anchor: anchor
+        )
+
+        XCTAssertTrue(SessionEngine.shouldRelease(session: session, terminatedApp: anchor))
+        XCTAssertFalse(SessionEngine.shouldRelease(session: session, terminatedApp: browser))
+    }
 }

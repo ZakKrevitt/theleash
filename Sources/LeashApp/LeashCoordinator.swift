@@ -15,12 +15,14 @@ final class LeashCoordinator: NSObject, ObservableObject {
     @Published var durationMinutes = 25
     @Published var mode: LeashMode = .nudge
     @Published var formError: String?
+    @Published private(set) var hasCompletedOnboarding: Bool
 
     private let store = StateStore()
     private let overlay = OverlayController()
     private let workspace = NSWorkspace.shared
     private var clock: Timer?
     private var isPullingBack = false
+    private var releaseHotKey: ReleaseHotKey?
 
     private var leashBundleIdentifier: String {
         Bundle.main.bundleIdentifier ?? "com.zakkrevitt.leash"
@@ -28,6 +30,7 @@ final class LeashCoordinator: NSObject, ObservableObject {
 
     override init() {
         state = store.load()
+        hasCompletedOnboarding = store.hasCompletedOnboarding
         super.init()
 
         let center = workspace.notificationCenter
@@ -45,7 +48,7 @@ final class LeashCoordinator: NSObject, ObservableObject {
         )
         center.addObserver(
             self,
-            selector: #selector(applicationsChanged(_:)),
+            selector: #selector(applicationTerminated(_:)),
             name: NSWorkspace.didTerminateApplicationNotification,
             object: nil
         )
@@ -54,6 +57,9 @@ final class LeashCoordinator: NSObject, ObservableObject {
         rememberFrontmostExternalApp()
         startClock()
         restoreSessionIfNeeded()
+        releaseHotKey = ReleaseHotKey { [weak self] in
+            self?.releaseSession()
+        }
     }
 
     deinit {
@@ -76,6 +82,12 @@ final class LeashCoordinator: NSObject, ObservableObject {
     func requestAccessibility() {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         _ = AXIsProcessTrustedWithOptions(options)
+    }
+
+    func finishOnboarding(requestAccessibility: Bool) {
+        store.completeOnboarding()
+        hasCompletedOnboarding = true
+        if requestAccessibility { self.requestAccessibility() }
     }
 
     func toggleAllowed(_ app: AppIdentity) {
@@ -121,11 +133,25 @@ final class LeashCoordinator: NSObject, ObservableObject {
     }
 
     func endSession(reason: String = "stopped") {
-        state.session = nil
-        state.lastStopReason = reason
+        SessionEngine.release(state: &state, reason: reason)
         save()
         overlay.stop()
+        isPullingBack = false
         rememberFrontmostExternalApp()
+    }
+
+    func releaseSession() {
+        guard state.session != nil else { return }
+        endSession(reason: "emergency-release")
+    }
+
+    func quitApplication() {
+        if state.session != nil {
+            endSession(reason: "quit")
+        } else {
+            overlay.stop()
+        }
+        NSApplication.shared.terminate(nil)
     }
 
     func completeSession() {
@@ -222,6 +248,15 @@ final class LeashCoordinator: NSObject, ObservableObject {
 
     @objc private func applicationsChanged(_ notification: Notification) {
         refreshRunningApps()
+    }
+
+    @objc private func applicationTerminated(_ notification: Notification) {
+        refreshRunningApps()
+        guard let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+              let app = identity(for: application),
+              let session = state.session,
+              SessionEngine.shouldRelease(session: session, terminatedApp: app) else { return }
+        endSession(reason: "anchor-closed")
     }
 
     private func startClock() {

@@ -14,6 +14,8 @@
     <string>com.zakkrevitt.leash</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
     <key>CFBundleName</key>
     <string>Leash</string>
     <key>CFBundlePackageType</key>

@@ -2,7 +2,7 @@
 
 Tell your Mac what you are doing. It keeps you there.
 
-Leash is a native, local-first macOS menu bar app for short focus sessions. It watches which app is active across the whole computer, keeps the current task beside your cursor, and intervenes when you switch outside the task.
+Leash is a native, local-first macOS menu bar app for short focus sessions. It watches which app is active across the whole computer and intervenes when you switch outside the task.
 
 ## How it works
 
@@ -13,6 +13,8 @@ Leash is a native, local-first macOS menu bar app for short focus sessions. It w
 5. Choose an intervention and start.
 
 The previously active app becomes the anchor. The companion stays hidden while you work inside an allowed app. It appears beside the cursor only when Leash catches a drift or confirms that you finished.
+
+Control-Option-Command-L releases an active leash from anywhere on the computer. Closing the anchor app also releases the session automatically.
 
 ### Catch me
 
@@ -35,7 +37,28 @@ The packaged app is available at `dist/Leash.app` after running:
 open dist/Leash.app
 ```
 
-Leash requires macOS 14 or later. The local build is ad hoc signed. A public release would need an Apple Developer ID signature and notarization.
+Leash requires macOS 14 or later. Local packaging produces an ad hoc signed universal build for Apple Silicon and Intel Macs.
+
+## Release packaging
+
+Public packages require a Developer ID Application certificate and a `notarytool` Keychain profile. Store notarization credentials once:
+
+```bash
+xcrun notarytool store-credentials leash-notary \
+  --apple-id "APPLE_ID" \
+  --team-id "TEAM_ID" \
+  --password "APP_SPECIFIC_PASSWORD"
+```
+
+Then build, sign, notarize, staple, and validate the release:
+
+```bash
+LEASH_SIGNING_IDENTITY="Developer ID Application: NAME (TEAMID)" \
+LEASH_NOTARY_PROFILE="leash-notary" \
+./scripts/package-macos.sh --release
+```
+
+The script outputs the notarized archive and a SHA-256 checksum in `dist/`. See `RELEASE_CHECKLIST.md` before publishing.
 
 ## Permissions and privacy
 
@@ -53,6 +76,7 @@ This release detects changes between macOS apps. It does not yet distinguish unr
 swift test
 swift build -c release
 ./scripts/package-macos.sh
+./scripts/qa-macos.sh
 ```
 
 The session engine is isolated in `LeashCore` and covered by unit tests. The menu bar app and overlay use SwiftUI and AppKit with no third-party dependencies.

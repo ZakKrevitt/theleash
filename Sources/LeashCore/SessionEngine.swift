@@ -79,6 +79,15 @@ public enum SessionEngine {
         state.lastStopReason = "complete"
     }
 
+    public static func release(state: inout LeashState, reason: String) {
+        state.session = nil
+        state.lastStopReason = reason
+    }
+
+    public static func shouldRelease(session: FocusSession, terminatedApp: AppIdentity) -> Bool {
+        session.anchor.bundleIdentifier == terminatedApp.bundleIdentifier
+    }
+
     public static func park(
         app: AppIdentity,
         windowTitle: String?,
