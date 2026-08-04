@@ -17,11 +17,7 @@ struct LeashMenuView: View {
         VStack(spacing: 0) {
             header
             if coordinator.session != nil {
-                ScrollView {
-                    ActiveSessionView(coordinator: coordinator)
-                }
-                .scrollIndicators(.never)
-                .frame(maxHeight: 650)
+                ActiveSessionView(coordinator: coordinator)
             } else if !coordinator.hasCompletedOnboarding {
                 OnboardingView(coordinator: coordinator)
             } else {
@@ -29,7 +25,7 @@ struct LeashMenuView: View {
                     SetupView(coordinator: coordinator)
                 }
                 .scrollIndicators(.never)
-                .frame(maxHeight: 650)
+                .frame(height: 650)
             }
             footer
         }
@@ -497,21 +493,27 @@ private struct ActiveSessionView: View {
                                 .font(.system(size: 9, weight: .black))
                                 .tracking(1)
                                 .foregroundStyle(Palette.muted)
-                            ForEach(items) { item in
-                                Button {
-                                    coordinator.toggleFinishLineItem(item)
-                                } label: {
-                                    HStack(spacing: 7) {
-                                        Image(systemName: item.isComplete ? "checkmark.circle.fill" : "circle")
-                                        Text(item.text)
-                                            .strikethrough(item.isComplete)
-                                        Spacer(minLength: 0)
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 5) {
+                                    ForEach(items) { item in
+                                        Button {
+                                            coordinator.toggleFinishLineItem(item)
+                                        } label: {
+                                            HStack(spacing: 7) {
+                                                Image(systemName: item.isComplete ? "checkmark.circle.fill" : "circle")
+                                                Text(item.text)
+                                                    .strikethrough(item.isComplete)
+                                                Spacer(minLength: 0)
+                                            }
+                                            .contentShape(Rectangle())
+                                        }
+                                        .buttonStyle(.plain)
+                                        .font(.system(size: 11, weight: .medium))
                                     }
-                                    .contentShape(Rectangle())
                                 }
-                                .buttonStyle(.plain)
-                                .font(.system(size: 11, weight: .medium))
                             }
+                            .scrollIndicators(.never)
+                            .frame(height: CGFloat(min(items.count, 5)) * 20)
                         }
                     } else if !session.doneWhen.isEmpty {
                         Text("Finish line: \(session.doneWhen)")
