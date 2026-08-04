@@ -1,6 +1,6 @@
 import { formatCountdown, isLaunchActive, normalizeAmount, STANDARD_PRICE } from "./pricing.js";
 
-const DOWNLOAD_URL = "/download/Leash-macOS-v0.1.0.zip";
+const DOWNLOAD_URL = "/download/Leash-macOS-v0.1.0.dmg";
 const priceForm = document.querySelector("#price-form");
 const optionButtons = [...document.querySelectorAll("[data-amount]")];
 const customInput = document.querySelector("#custom-amount");

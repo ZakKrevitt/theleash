@@ -2,6 +2,8 @@
 
 Static landing page and Vercel serverless checkout for Leash.
 
+The primary download is the versioned DMG in `download/`. Keep its SHA-256 file beside it and retain the ZIP as a fallback release artifact.
+
 ## Local preview
 
 ```bash

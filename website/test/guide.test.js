@@ -4,6 +4,7 @@ import test from "node:test";
 
 const guideUrl = new URL("../guide.html", import.meta.url);
 const indexUrl = new URL("../index.html", import.meta.url);
+const appUrl = new URL("../app.js", import.meta.url);
 
 test("guide navigation points to complete setup sections", async () => {
   const guide = await readFile(guideUrl, "utf8");
@@ -22,4 +23,14 @@ test("guide navigation points to complete setup sections", async () => {
 test("site footer links to the user guide", async () => {
   const index = await readFile(indexUrl, "utf8");
   assert.match(index, /href="\/guide\.html">Guide<\/a>/);
+});
+
+test("website downloads the DMG installer", async () => {
+  const [app, index] = await Promise.all([
+    readFile(appUrl, "utf8"),
+    readFile(indexUrl, "utf8"),
+  ]);
+
+  assert.match(app, /DOWNLOAD_URL = "\/download\/Leash-macOS-v0\.1\.0\.dmg"/);
+  assert.match(index, /href="\/download\/Leash-macOS-v0\.1\.0\.dmg\.sha256"/);
 });
