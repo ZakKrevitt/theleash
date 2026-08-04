@@ -136,13 +136,11 @@ nav a {
   max-width: 1050px;
 }
 
-.eyebrow,
-.section-number {
+.eyebrow {
   margin: 0 0 24px;
-  font-size: 12px;
-  font-weight: 760;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  color: rgba(252, 250, 242, 0.64);
+  font-size: 15px;
+  font-weight: 650;
 }
 
 .hero h1 {
@@ -154,15 +152,7 @@ nav a {
   line-height: 0.91;
 }
 
-.hero h1 em,
-.problem h2 em,
-.footer-title em {
-  color: var(--acid);
-  font-family: Iowan Old Style, Baskerville, Georgia, serif;
-  font-weight: 400;
-}
-
-.hero h1 em {
+.hero h1 span {
   display: block;
   margin-left: 10%;
 }
@@ -494,10 +484,6 @@ nav a {
   line-height: 0.96;
 }
 
-.problem h2 em {
-  color: var(--catch);
-}
-
 .problem-copy {
   font-size: 18px;
 }
@@ -511,10 +497,11 @@ nav a {
 }
 
 .section-heading {
-  display: grid;
-  grid-template-columns: 0.7fr 1.8fr;
-  gap: 40px;
   margin-bottom: 82px;
+}
+
+.section-heading h2 {
+  max-width: 920px;
 }
 
 .steps {
@@ -653,21 +640,6 @@ nav a {
   font-size: 18px;
 }
 
-.behavior-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 28px;
-}
-
-.behavior-tags span {
-  padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 650;
-}
-
 .privacy {
   display: grid;
   grid-template-columns: 1fr 0.8fr;
@@ -675,7 +647,7 @@ nav a {
   align-items: end;
 }
 
-.privacy-lockup > p:not(.section-number) {
+.privacy-lockup > p {
   max-width: 650px;
   margin: 30px 0 24px;
   color: var(--muted);
@@ -696,15 +668,9 @@ nav a {
 
 .privacy-list li {
   display: flex;
-  gap: 20px;
   padding: 20px 0;
   border-bottom: 1px solid var(--line);
   font-weight: 650;
-}
-
-.privacy-list span {
-  color: var(--catch);
-  font-size: 11px;
 }
 
 .pricing {
@@ -720,7 +686,7 @@ nav a {
   top: 40px;
 }
 
-.pricing-intro > p:not(.section-number) {
+.pricing-intro > p {
   max-width: 520px;
   margin: 28px 0;
   color: var(--muted);
@@ -737,10 +703,8 @@ nav a {
 
 .countdown-label {
   color: var(--muted);
-  font-size: 11px;
-  font-weight: 720;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 650;
 }
 
 #countdown {
@@ -820,14 +784,6 @@ legend,
   cursor: pointer;
   font-size: 21px;
   font-weight: 760;
-}
-
-.price-options button small {
-  color: var(--muted);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .price-options button.selected {
@@ -1011,7 +967,7 @@ input:focus-visible {
   .site-header { min-height: 70px; }
   nav > a:first-child { display: none; }
   .hero { min-height: 900px; padding-top: 120px; }
-  .hero h1 em { margin-left: 0; }
+  .hero h1 span { margin-left: 0; }
   .product-stage { height: 390px; margin-top: 34px; }
   .app-fan { gap: 6px; left: -100px; right: -100px; }
   .app-tile { width: 155px; height: 240px; padding: 16px; }
