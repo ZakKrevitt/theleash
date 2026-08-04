@@ -238,6 +238,7 @@ final class LeashCoordinator: NSObject, ObservableObject {
               app.bundleIdentifier != leashBundleIdentifier else { return }
 
         guard let session = state.session else { return }
+        guard !timeboxEnded else { return }
 
         let decision = SessionEngine.decision(
             for: app,

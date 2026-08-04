@@ -17,11 +17,19 @@ struct LeashMenuView: View {
         VStack(spacing: 0) {
             header
             if coordinator.session != nil {
-                ActiveSessionView(coordinator: coordinator)
+                ScrollView {
+                    ActiveSessionView(coordinator: coordinator)
+                }
+                .scrollIndicators(.never)
+                .frame(maxHeight: 650)
             } else if !coordinator.hasCompletedOnboarding {
                 OnboardingView(coordinator: coordinator)
             } else {
-                SetupView(coordinator: coordinator)
+                ScrollView {
+                    SetupView(coordinator: coordinator)
+                }
+                .scrollIndicators(.never)
+                .frame(maxHeight: 650)
             }
             footer
         }
@@ -166,10 +174,15 @@ private enum FinishLineMode: String, CaseIterable {
     case checklist = "Checklist"
 }
 
+private struct FinishLineDraftItem: Identifiable {
+    let id = UUID()
+    var text = ""
+}
+
 private struct SetupView: View {
     @ObservedObject var coordinator: LeashCoordinator
     @State private var finishLineMode: FinishLineMode = .outcome
-    @State private var checklistItems = ["", ""]
+    @State private var checklistItems = [FinishLineDraftItem(), FinishLineDraftItem()]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 17) {
@@ -242,15 +255,15 @@ private struct SetupView: View {
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.black.opacity(0.12)))
                 } else {
                     VStack(spacing: 6) {
-                        ForEach(checklistItems.indices, id: \.self) { index in
+                        ForEach($checklistItems) { $item in
                             HStack(spacing: 7) {
                                 Image(systemName: "circle")
                                     .foregroundStyle(Palette.muted)
-                                TextField("Finish-line step", text: $checklistItems[index])
+                                TextField("Finish-line step", text: $item.text)
                                     .textFieldStyle(.plain)
                                 if checklistItems.count > 1 {
                                     Button {
-                                        checklistItems.remove(at: index)
+                                        checklistItems.removeAll { $0.id == item.id }
                                     } label: {
                                         Image(systemName: "xmark")
                                     }
@@ -266,7 +279,7 @@ private struct SetupView: View {
                     }
 
                     if checklistItems.count < 12 {
-                        Button("Add step") { checklistItems.append("") }
+                        Button("Add step") { checklistItems.append(FinishLineDraftItem()) }
                             .buttonStyle(.plain)
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(Palette.muted)
@@ -356,7 +369,7 @@ private struct SetupView: View {
 
                 Button("Start leash") {
                     coordinator.startSession(
-                        finishLineItems: finishLineMode == .checklist ? checklistItems : nil
+                        finishLineItems: finishLineMode == .checklist ? checklistItems.map(\.text) : nil
                     )
                 }
                     .buttonStyle(PrimaryButtonStyle())
