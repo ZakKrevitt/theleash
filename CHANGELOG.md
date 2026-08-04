@@ -10,3 +10,4 @@
 - Added first-launch privacy and permission onboarding.
 - Added universal Apple Silicon and Intel packaging.
 - Added Developer ID signing and notarization automation.
+- Added a drag-to-Applications DMG installer with an offline user guide.

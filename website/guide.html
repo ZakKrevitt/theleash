@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f3f0e8" />
+    <meta name="description" content="Install Leash and set up your first focused work session." />
+    <title>User Guide | Leash</title>
+    <style>
+      :root {
+        --paper: #f3f0e8;
+        --panel: #fcfaf2;
+        --ink: #1f211d;
+        --muted: #6e7167;
+        --catch: #e65335;
+        --acid: #d9fa64;
+        --line: rgba(31, 33, 29, 0.18);
+      }
+
+      * { box-sizing: border-box; }
+
+      html { scroll-behavior: smooth; }
+
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.58;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a { color: inherit; text-underline-offset: 4px; }
+
+      .header {
+        display: flex;
+        width: min(calc(100% - 40px), 1120px);
+        min-height: 82px;
+        align-items: center;
+        justify-content: space-between;
+        margin: 0 auto;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 22px;
+        font-weight: 720;
+        letter-spacing: -0.04em;
+        text-decoration: none;
+      }
+
+      .mark { width: 30px; height: 30px; }
+
+      .back { font-size: 13px; font-weight: 700; }
+
+      main {
+        width: min(calc(100% - 40px), 900px);
+        margin: 0 auto;
+        padding: 90px 0 120px;
+      }
+
+      .eyebrow {
+        margin: 0 0 24px;
+        font-size: 12px;
+        font-weight: 760;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 760px;
+        margin: 0;
+        font-size: clamp(54px, 8vw, 92px);
+        font-weight: 500;
+        letter-spacing: -0.065em;
+        line-height: 0.95;
+      }
+
+      .lead {
+        max-width: 760px;
+        margin: 42px 0 68px;
+        font-size: clamp(21px, 3vw, 30px);
+        letter-spacing: -0.03em;
+        line-height: 1.3;
+      }
+
+      .contents {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin: 0 0 80px;
+      }
+
+      .contents a {
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      section { margin-top: 76px; }
+
+      h2 {
+        margin: 0 0 18px;
+        font-size: 30px;
+        letter-spacing: -0.04em;
+        line-height: 1.15;
+      }
+
+      h3 { margin: 34px 0 8px; font-size: 18px; }
+
+      p, li { color: #4f5349; }
+
+      li + li { margin-top: 9px; }
+
+      .steps { padding-left: 24px; }
+
+      .steps li { padding-left: 8px; }
+
+      .note {
+        margin: 28px 0;
+        padding: 20px 22px;
+        border-left: 4px solid var(--catch);
+        border-radius: 0 12px 12px 0;
+        background: var(--panel);
+      }
+
+      .shortcut {
+        display: inline-block;
+        padding: 3px 8px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--panel);
+        color: var(--ink);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.9em;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: rgba(31, 33, 29, 0.09);
+        color: var(--ink);
+      }
+
+      pre {
+        overflow-x: auto;
+        padding: 18px;
+        border-radius: 12px;
+        background: var(--ink);
+        color: var(--panel);
+      }
+
+      pre code { padding: 0; background: transparent; color: inherit; }
+
+      .mode-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin: 24px 0;
+      }
+
+      .mode {
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+      }
+
+      .mode h3 { margin-top: 0; }
+
+      footer {
+        margin-top: 90px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 680px) {
+        .header { min-height: 70px; }
+        main { width: calc(100% - 28px); padding-top: 68px; }
+        .contents, .mode-grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <a class="brand" href="#top">
+        <svg class="mark" viewBox="0 0 40 40" aria-hidden="true">
+          <circle cx="20" cy="20" r="15.5" fill="none" stroke="currentColor" stroke-width="3" />
+          <rect x="14" y="18" width="13" height="4" rx="2" fill="#E65335" transform="rotate(35 20.5 20)" />
+        </svg>
+        <span>Leash</span>
+      </a>
+      <a class="back" href="#install">Install</a>
+    </header>
+
+    <main id="top">
+      <p class="eyebrow">SETUP / USER GUIDE</p>
+      <h1>Stay with the thing.</h1>
+      <p class="lead">Leash gives one task a clear finish line, then notices when another app pulls you away. Setup takes about a minute.</p>
+
+      <nav class="contents" aria-label="Guide sections">
+        <a href="#install">Install</a>
+        <a href="#first-session">First session</a>
+        <a href="#during">During a leash</a>
+        <a href="#finish">Finish or release</a>
+        <a href="#troubleshooting">Troubleshooting</a>
+        <a href="#uninstall">Update or uninstall</a>
+      </nav>
+
+      <section id="install">
+        <h2>Install Leash</h2>
+        <ol class="steps">
+          <li>Download <strong>Leash-macOS-v0.1.0.dmg</strong>.</li>
+          <li>Open the disk image and drag <strong>Leash</strong> onto the <strong>Applications</strong> shortcut.</li>
+          <li>Eject the Leash disk image in Finder.</li>
+          <li>Open Leash from Applications or Spotlight.</li>
+        </ol>
+        <p>Leash requires macOS 14 or later and runs on Apple Silicon and Intel Macs. It lives in the menu bar, so no Dock window opens.</p>
+        <div class="note"><strong>No special permissions.</strong> Leash does not ask for Accessibility, Screen Recording, Input Monitoring, or Automation access.</div>
+      </section>
+
+      <section id="first-session">
+        <h2>Set your first leash</h2>
+        <ol class="steps">
+          <li>Open the Mac apps you expect to use for the task.</li>
+          <li>Click the Leash icon in the menu bar.</li>
+          <li>Name the task in plain language, such as <em>Send the revised deck</em>.</li>
+          <li>Choose a finish line. Write one outcome or make a checklist.</li>
+          <li>Pick the main app. This is the anchor Leash returns you to.</li>
+          <li>Allow any other open apps the task genuinely needs.</li>
+          <li>Choose a timer and an intervention, then start.</li>
+        </ol>
+        <p>If an app is missing from the picker, open it first. Leash lists apps that are running now.</p>
+
+        <div class="mode-grid">
+          <article class="mode">
+            <h3>Catch me</h3>
+            <p>Leash shows a prompt beside the cursor when you enter an unrelated app. The app stays open. The catch is saved in Later so you can return to it after the task.</p>
+          </article>
+          <article class="mode">
+            <h3>Pull me back</h3>
+            <p>Leash saves the unrelated app in Later, hides it, and brings the anchor forward. Hiding is reversible. The app is not quit and its work is not discarded.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="during">
+        <h2>During a leash</h2>
+        <p>The companion stays out of sight while you work in the anchor or another allowed app. It appears when Leash catches a drift, the timer ends, or you finish.</p>
+        <h3>Need another app?</h3>
+        <p>Open Leash from the menu bar and add the app to the active session. Keep the list narrow enough that the leash still means something.</p>
+        <h3>Want something from Later?</h3>
+        <p>Later records the app where a catch happened, not the page, tab, window title, or document. Use it as a short reminder list after the current task ends.</p>
+      </section>
+
+      <section id="finish">
+        <h2>Finish, extend, or release</h2>
+        <p>Choose <strong>Finish</strong> when the finish line is true. A checklist can finish only after every item is checked.</p>
+        <p>When time runs out, finish the task, add 10 minutes, or release the leash without recording a completion.</p>
+        <div class="note"><strong>Emergency release:</strong> press <span class="shortcut">Control-Option-Command-L</span> from anywhere. Closing the anchor app also releases the session.</div>
+      </section>
+
+      <section id="troubleshooting">
+        <h2>Troubleshooting</h2>
+        <h3>I opened Leash but nothing appeared</h3>
+        <p>Look for the Leash icon on the right side of the menu bar. Leash is a menu bar app and does not open a normal window or Dock icon.</p>
+        <h3>An app is missing</h3>
+        <p>Launch the app, reopen the Leash menu, and check the picker again.</p>
+        <h3>The global release shortcut is unavailable</h3>
+        <p>Another app may already use that key combination. Release and Quit remain available in the Leash menu. Quit the conflicting app, then restart Leash to register the shortcut again.</p>
+        <h3>Pull me back made an app disappear</h3>
+        <p>The app was hidden, not closed. Click its icon in the Dock or use Command-Tab to bring it back.</p>
+        <h3>Leash does not notice a browser tab change</h3>
+        <p>Version 0.1 watches app changes. Tabs inside one browser count as the same app.</p>
+        <h3>The app will not open after download</h3>
+        <p>Use the current DMG from the official Leash download page. Move Leash into Applications before launching. If macOS reports that the app is damaged or cannot be verified, download it again and contact support instead of bypassing Gatekeeper.</p>
+      </section>
+
+      <section id="verify">
+        <h2>Verify a download</h2>
+        <p>Compare the DMG against the published SHA-256 file:</p>
+        <pre><code>shasum -a 256 -c Leash-macOS-v0.1.0.dmg.sha256</code></pre>
+        <p>After installation, macOS can verify the Developer ID signature and notarization:</p>
+        <pre><code>codesign -d --verbose=4 /Applications/Leash.app
+spctl --assess --type execute --verbose=4 /Applications/Leash.app</code></pre>
+        <p>An official build has Team ID <code>QWT6LQP2GH</code>.</p>
+      </section>
+
+      <section id="uninstall">
+        <h2>Update or uninstall</h2>
+        <h3>Update</h3>
+        <p>Quit Leash, open the new DMG, and replace the old copy in Applications. Your local settings remain in place.</p>
+        <h3>Uninstall</h3>
+        <ol class="steps">
+          <li>Choose <strong>Quit</strong> from the Leash menu.</li>
+          <li>Move <strong>/Applications/Leash.app</strong> to the Trash.</li>
+          <li>To remove Leash preferences and Later data, open Terminal and run <code>defaults delete com.zakkrevitt.leash</code>.</li>
+        </ol>
+      </section>
+
+      <section id="privacy">
+        <h2>Privacy</h2>
+        <p>Leash stores the active session and Later app identities in local macOS preferences. It does not read window titles, URLs, page contents, documents, screenshots, clipboard data, or keystrokes. It contains no account, analytics, telemetry, crash reporter, or network client.</p>
+      </section>
+
+      <footer>
+        Leash 0.1.0. Support: <a href="mailto:zak.krevitt@gmail.com">zak.krevitt@gmail.com</a>
+      </footer>
+    </main>
+  </body>
+</html>

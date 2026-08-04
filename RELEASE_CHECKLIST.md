@@ -6,9 +6,10 @@
 - [ ] Store App Store Connect notarization credentials in a Keychain profile.
 - [ ] Run `./scripts/qa-macos.sh` successfully.
 - [ ] Run `LEASH_SIGNING_IDENTITY="Developer ID Application: NAME (TEAMID)" LEASH_NOTARY_PROFILE="leash-notary" ./scripts/package-macos.sh --release` successfully.
-- [ ] Confirm `spctl` accepts the packaged app.
-- [ ] Confirm the SHA-256 checksum matches the release archive.
-- [ ] Test with a clean macOS user account after downloading the archive through a browser.
+- [ ] Confirm `spctl` accepts the packaged app and DMG.
+- [ ] Confirm the SHA-256 checksums match the DMG and ZIP.
+- [ ] Open the DMG, drag Leash to Applications, and launch it in a clean macOS user account after downloading through a browser.
+- [ ] Confirm the DMG contains Leash, the Applications shortcut, and the offline user guide.
 - [ ] Complete the manual QA matrix below.
 - [ ] Review `PRIVACY.md` and `CHANGELOG.md`.
 
@@ -34,7 +35,8 @@
 
 ## Release
 
-- [ ] Upload the notarized archive and checksum to an HTTPS download page.
+- [ ] Upload the notarized DMG, ZIP fallback, and both checksums to an HTTPS download page.
+- [ ] Make the DMG the primary website download.
 - [ ] Download the uploaded artifact and verify its checksum.
 - [ ] Open the downloaded app and repeat the critical smoke test.
 - [ ] Publish the privacy policy and release notes beside the download.

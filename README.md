@@ -30,14 +30,16 @@ Click **Finish** in the active session panel when the finish line is true. Leash
 
 ## Install
 
-The packaged app is available at `dist/Leash.app` after running:
+Download the DMG, open it, and drag Leash into the Applications folder. On first launch, open Leash from Applications or Spotlight. Leash lives in the menu bar and does not open a Dock window.
+
+The local installer and ZIP are available in `dist/` after running:
 
 ```bash
 ./scripts/package-macos.sh
-open dist/Leash.app
+open dist/Leash-macOS-v0.1.0.dmg
 ```
 
-Leash requires macOS 14 or later. Local packaging produces an ad hoc signed universal build for Apple Silicon and Intel Macs.
+Leash requires macOS 14 or later. Local packaging produces an ad hoc signed universal build for Apple Silicon and Intel Macs. See the [Leash User Guide](website/guide.html) for first-run instructions, session setup, troubleshooting, updates, privacy, and uninstall steps.
 
 ## Release packaging
 
@@ -58,7 +60,7 @@ LEASH_NOTARY_PROFILE="leash-notary" \
 ./scripts/package-macos.sh --release
 ```
 
-The script outputs the notarized archive and a SHA-256 checksum in `dist/`. See `RELEASE_CHECKLIST.md` before publishing.
+The script outputs a notarized DMG installer, a ZIP fallback, and SHA-256 checksums in `dist/`. See `RELEASE_CHECKLIST.md` before publishing.
 
 ## Permissions and privacy
 

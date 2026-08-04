@@ -10,8 +10,38 @@ CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 ZIP_PATH="$PROJECT_ROOT/dist/Leash-macOS-v$VERSION.zip"
+DMG_PATH="$PROJECT_ROOT/dist/Leash-macOS-v$VERSION.dmg"
+DMG_VOLUME_NAME="Leash $VERSION"
+GUIDE_PATH="$PROJECT_ROOT/website/guide.html"
 BUILD_DIR="$PROJECT_ROOT/.build/apple/Products/Release"
 RELEASE_MODE=false
+DMG_STAGING_DIR=""
+
+cleanup() {
+    if [[ -n "$DMG_STAGING_DIR" && -d "$DMG_STAGING_DIR" ]]; then
+        rm -rf "$DMG_STAGING_DIR"
+    fi
+}
+
+trap cleanup EXIT
+
+create_dmg() {
+    DMG_STAGING_DIR="$(mktemp -d "${TMPDIR:-/tmp}/leash-dmg.XXXXXX")"
+    ditto "$APP_DIR" "$DMG_STAGING_DIR/$APP_NAME.app"
+    ln -s /Applications "$DMG_STAGING_DIR/Applications"
+    cp "$GUIDE_PATH" "$DMG_STAGING_DIR/Leash User Guide.html"
+
+    rm -f "$DMG_PATH"
+    hdiutil create \
+        -volname "$DMG_VOLUME_NAME" \
+        -srcfolder "$DMG_STAGING_DIR" \
+        -format UDZO \
+        -imagekey zlib-level=9 \
+        "$DMG_PATH"
+
+    cleanup
+    DMG_STAGING_DIR=""
+}
 
 if [[ "${1:-}" == "--release" ]]; then
     RELEASE_MODE=true
@@ -69,8 +99,35 @@ if $RELEASE_MODE; then
     spctl --assess --type execute --verbose=4 "$APP_DIR"
 fi
 
-shasum -a 256 "$ZIP_PATH" > "$ZIP_PATH.sha256"
+unzip -tq "$ZIP_PATH"
+create_dmg
+
+if $RELEASE_MODE; then
+    codesign \
+        --force \
+        --timestamp \
+        --sign "$LEASH_SIGNING_IDENTITY" \
+        "$DMG_PATH"
+    codesign --verify --strict --verbose=2 "$DMG_PATH"
+
+    xcrun notarytool submit \
+        "$DMG_PATH" \
+        --keychain-profile "$LEASH_NOTARY_PROFILE" \
+        --wait
+    xcrun stapler staple "$DMG_PATH"
+    xcrun stapler validate "$DMG_PATH"
+    spctl --assess --type open --context context:primary-signature --verbose=4 "$DMG_PATH"
+fi
+
+hdiutil verify "$DMG_PATH"
+(
+    cd "$PROJECT_ROOT/dist"
+    shasum -a 256 "${ZIP_PATH:t}" > "${ZIP_PATH:t}.sha256"
+    shasum -a 256 "${DMG_PATH:t}" > "${DMG_PATH:t}.sha256"
+)
 
 echo "$APP_DIR"
 echo "$ZIP_PATH"
 echo "$ZIP_PATH.sha256"
+echo "$DMG_PATH"
+echo "$DMG_PATH.sha256"
