@@ -161,8 +161,15 @@ private struct OnboardingView: View {
     }
 }
 
+private enum FinishLineMode: String, CaseIterable {
+    case outcome = "One outcome"
+    case checklist = "Checklist"
+}
+
 private struct SetupView: View {
     @ObservedObject var coordinator: LeashCoordinator
+    @State private var finishLineMode: FinishLineMode = .outcome
+    @State private var checklistItems = ["", ""]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 17) {
@@ -207,9 +214,64 @@ private struct SetupView: View {
                     .textFieldStyle(.plain)
             }
 
-            field("Done when", suffix: "optional") {
-                TextField("The draft is sent to Maya", text: $coordinator.doneWhenDraft)
-                    .textFieldStyle(.plain)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Finish line")
+                        .font(.system(size: 12, weight: .bold))
+                    Spacer()
+                    Picker("Finish line type", selection: $finishLineMode) {
+                        ForEach(FinishLineMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(width: 190)
+                }
+
+                Text("What must become true before this task is finished?")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Palette.muted)
+
+                if finishLineMode == .outcome {
+                    TextField("The draft is sent to Maya", text: $coordinator.doneWhenDraft)
+                        .textFieldStyle(.plain)
+                        .padding(.horizontal, 11)
+                        .frame(height: 42)
+                        .background(Palette.panel, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.black.opacity(0.12)))
+                } else {
+                    VStack(spacing: 6) {
+                        ForEach(checklistItems.indices, id: \.self) { index in
+                            HStack(spacing: 7) {
+                                Image(systemName: "circle")
+                                    .foregroundStyle(Palette.muted)
+                                TextField("Finish-line step", text: $checklistItems[index])
+                                    .textFieldStyle(.plain)
+                                if checklistItems.count > 1 {
+                                    Button {
+                                        checklistItems.remove(at: index)
+                                    } label: {
+                                        Image(systemName: "xmark")
+                                    }
+                                    .buttonStyle(.plain)
+                                    .foregroundStyle(Palette.muted)
+                                }
+                            }
+                            .padding(.horizontal, 11)
+                            .frame(height: 38)
+                            .background(Palette.panel, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.black.opacity(0.12)))
+                        }
+                    }
+
+                    if checklistItems.count < 12 {
+                        Button("Add step") { checklistItems.append("") }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Palette.muted)
+                    }
+                }
             }
 
             VStack(alignment: .leading, spacing: 7) {
@@ -227,25 +289,49 @@ private struct SetupView: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Apps inside the leash")
-                        .font(.system(size: 12, weight: .bold))
-                    Spacer()
-                    if let anchor = coordinator.lastExternalApp {
-                        Text("Anchor: \(anchor.name)")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(Palette.muted)
+                Text("Main app")
+                    .font(.system(size: 12, weight: .bold))
+                Text("Leash returns you here when it pulls you back.")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Palette.muted)
+
+                Picker("Main app", selection: $coordinator.selectedAnchorBundleIdentifier) {
+                    Text("Choose an open app").tag(nil as String?)
+                    ForEach(coordinator.runningApps) { app in
+                        Text(app.name).tag(Optional(app.bundleIdentifier))
                     }
                 }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity, minHeight: 42, alignment: .leading)
+                .padding(.horizontal, 9)
+                .background(Palette.panel, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.black.opacity(0.12)))
+
+                if coordinator.runningApps.isEmpty {
+                    Text("No open apps found. Open an app and try again.")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Palette.accent)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Other allowed apps")
+                    .font(.system(size: 12, weight: .bold))
+                Text("Choose any other open apps this task needs.")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Palette.muted)
 
                 ScrollView {
                     LazyVStack(spacing: 3) {
-                        ForEach(coordinator.runningApps) { app in
+                        ForEach(coordinator.runningApps.filter {
+                            $0.bundleIdentifier != coordinator.selectedAnchorBundleIdentifier
+                        }) { app in
                             AppToggleRow(
                                 app: app,
                                 icon: coordinator.icon(for: app),
                                 selected: coordinator.isSelected(app),
-                                locked: app.bundleIdentifier == coordinator.lastExternalApp?.bundleIdentifier,
+                                locked: false,
                                 action: { coordinator.toggleAllowed(app) }
                             )
                         }
@@ -268,7 +354,11 @@ private struct SetupView: View {
                 .labelsHidden()
                 .frame(width: 95)
 
-                Button("Start leash") { coordinator.startSession() }
+                Button("Start leash") {
+                    coordinator.startSession(
+                        finishLineItems: finishLineMode == .checklist ? checklistItems : nil
+                    )
+                }
                     .buttonStyle(PrimaryButtonStyle())
             }
 
@@ -388,15 +478,37 @@ private struct ActiveSessionView: View {
                     Text(session.task)
                         .font(.system(size: 27, weight: .bold))
                         .tracking(-0.8)
-                    if !session.doneWhen.isEmpty {
-                        Text("Done: \(session.doneWhen)")
+                    if let items = session.finishLineItems, !items.isEmpty {
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("FINISH LINE")
+                                .font(.system(size: 9, weight: .black))
+                                .tracking(1)
+                                .foregroundStyle(Palette.muted)
+                            ForEach(items) { item in
+                                Button {
+                                    coordinator.toggleFinishLineItem(item)
+                                } label: {
+                                    HStack(spacing: 7) {
+                                        Image(systemName: item.isComplete ? "checkmark.circle.fill" : "circle")
+                                        Text(item.text)
+                                            .strikethrough(item.isComplete)
+                                        Spacer(minLength: 0)
+                                    }
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .font(.system(size: 11, weight: .medium))
+                            }
+                        }
+                    } else if !session.doneWhen.isEmpty {
+                        Text("Finish line: \(session.doneWhen)")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(Palette.muted)
                     }
                     Divider().padding(.vertical, 4)
                     HStack(alignment: .firstTextBaseline) {
-                        Text(coordinator.remainingText)
-                            .font(.system(size: 30, weight: .black, design: .monospaced))
+                        Text(coordinator.timeboxEnded ? "TIME'S UP" : coordinator.remainingText)
+                            .font(.system(size: coordinator.timeboxEnded ? 20 : 30, weight: .black, design: .monospaced))
                         Spacer()
                         Text("\(session.catchCount) \(session.catchCount == 1 ? "catch" : "catches")")
                             .font(.system(size: 11, weight: .bold))
@@ -427,12 +539,19 @@ private struct ActiveSessionView: View {
                     Button {
                         coordinator.completeSession()
                     } label: {
-                        Label("Done", systemImage: "checkmark")
+                        Label("Finish", systemImage: "checkmark")
                     }
                     .buttonStyle(CompletionButtonStyle())
+                    .disabled(!coordinator.canCompleteSession)
+                    .opacity(coordinator.canCompleteSession ? 1 : 0.42)
 
-                    Button("Return to task") { coordinator.returnToTask() }
-                        .buttonStyle(PrimaryButtonStyle())
+                    if coordinator.timeboxEnded {
+                        Button("+10 min") { coordinator.extendTimebox() }
+                            .buttonStyle(PrimaryButtonStyle())
+                    } else {
+                        Button("Return to task") { coordinator.returnToTask() }
+                            .buttonStyle(PrimaryButtonStyle())
+                    }
                 }
 
                 if let current = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,

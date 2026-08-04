@@ -6,19 +6,19 @@ Leash is a native, local-first macOS menu bar app for short focus sessions. It w
 
 ## How it works
 
-1. Open the app where the work should happen.
-2. Open Leash from the menu bar.
-3. Name the task and optionally define what done means.
-4. Select any other apps the task needs.
+1. Open Leash from the menu bar.
+2. Name the task and set a clear finish line, either one outcome or a checklist.
+3. Choose the main app from the apps currently open on your Mac.
+4. Select any other open apps the task needs.
 5. Choose an intervention and start.
 
-The previously active app becomes the anchor. The companion stays hidden while you work inside an allowed app. It appears beside the cursor only when Leash catches a drift or confirms that you finished.
+The main app becomes the anchor. The companion stays hidden while you work inside an allowed app. It appears beside the cursor when Leash catches a drift, the timer ends, or you finish.
 
 Control-Option-Command-L releases an active leash from anywhere on the computer. Closing the anchor app also releases the session automatically.
 
 ### Catch me
 
-Leash notices an unrelated app, shows what happened beside the cursor, and saves the distraction in Later. The prompt offers **Done** and **Back to task**, so leaving the work becomes a natural completion checkpoint.
+Leash notices an unrelated app, shows what happened beside the cursor, and saves the distraction in Later. The prompt repeats your finish line and asks whether it is true. Checklist sessions can finish only after every step is checked.
 
 ### Pull me back
 
@@ -26,7 +26,7 @@ Leash saves and hides the unrelated app, then reactivates the anchor app. Hiding
 
 ### Finishing
 
-Click **Done** in the active session panel when the definition of done is true. Leash records a successful completion, releases the session, and confirms it beside the cursor. A timer ending only ends the timebox. It does not claim that the task itself is complete.
+Click **Finish** in the active session panel when the finish line is true. Leash records a successful completion, releases the session, and confirms it beside the cursor. When the timer ends, choose whether to finish, add 10 minutes, or release the leash without claiming completion.
 
 ## Install
 

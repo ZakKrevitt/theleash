@@ -31,16 +31,29 @@ public enum LeashMode: String, Codable, CaseIterable, Sendable {
     }
 }
 
+public struct FinishLineItem: Codable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public let text: String
+    public var isComplete: Bool
+
+    public init(id: UUID = UUID(), text: String, isComplete: Bool = false) {
+        self.id = id
+        self.text = text
+        self.isComplete = isComplete
+    }
+}
+
 public struct FocusSession: Codable, Equatable, Sendable {
     public let id: UUID
     public let task: String
     public let doneWhen: String
     public let mode: LeashMode
     public let startedAt: Date
-    public let endsAt: Date
+    public var endsAt: Date
     public let anchor: AppIdentity
     public var allowedBundleIdentifiers: Set<String>
     public var catchCount: Int
+    public var finishLineItems: [FinishLineItem]?
 
     public init(
         id: UUID = UUID(),
@@ -51,7 +64,8 @@ public struct FocusSession: Codable, Equatable, Sendable {
         endsAt: Date,
         anchor: AppIdentity,
         allowedBundleIdentifiers: Set<String>,
-        catchCount: Int = 0
+        catchCount: Int = 0,
+        finishLineItems: [FinishLineItem]? = nil
     ) {
         self.id = id
         self.task = task
@@ -62,6 +76,7 @@ public struct FocusSession: Codable, Equatable, Sendable {
         self.anchor = anchor
         self.allowedBundleIdentifiers = allowedBundleIdentifiers
         self.catchCount = catchCount
+        self.finishLineItems = finishLineItems
     }
 }
 

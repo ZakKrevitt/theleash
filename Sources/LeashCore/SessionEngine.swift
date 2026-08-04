@@ -2,13 +2,15 @@ import Foundation
 
 public enum SessionError: LocalizedError, Equatable {
     case missingTask
+    case missingFinishLine
     case missingAnchor
     case invalidDuration
 
     public var errorDescription: String? {
         switch self {
         case .missingTask: "Name the task before starting."
-        case .missingAnchor: "Open the app where the work should happen, then start the leash."
+        case .missingFinishLine: "Add at least one finish-line step."
+        case .missingAnchor: "Choose the main app for this leash."
         case .invalidDuration: "Choose a session between 1 and 180 minutes."
         }
     }
@@ -28,6 +30,7 @@ public enum SessionEngine {
         mode: LeashMode,
         anchor: AppIdentity?,
         allowedBundleIdentifiers: Set<String> = [],
+        finishLineItems: [String]? = nil,
         now: Date = Date()
     ) throws -> FocusSession {
         let cleanTask = task.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -38,6 +41,19 @@ public enum SessionEngine {
         var allowed = allowedBundleIdentifiers
         allowed.insert(anchor.bundleIdentifier)
 
+        let items: [FinishLineItem]?
+        if let finishLineItems {
+            let cleaned = finishLineItems
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .prefix(12)
+                .map { FinishLineItem(text: String($0.prefix(240))) }
+            guard !cleaned.isEmpty else { throw SessionError.missingFinishLine }
+            items = Array(cleaned)
+        } else {
+            items = nil
+        }
+
         return FocusSession(
             task: cleanTask,
             doneWhen: doneWhen.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -45,7 +61,8 @@ public enum SessionEngine {
             startedAt: now,
             endsAt: now.addingTimeInterval(TimeInterval(durationMinutes * 60)),
             anchor: anchor,
-            allowedBundleIdentifiers: allowed
+            allowedBundleIdentifiers: allowed,
+            finishLineItems: items
         )
     }
 
@@ -72,6 +89,23 @@ public enum SessionEngine {
 
     public static func isExpired(_ session: FocusSession, now: Date = Date()) -> Bool {
         session.endsAt <= now
+    }
+
+    public static func canComplete(_ session: FocusSession) -> Bool {
+        guard let items = session.finishLineItems, !items.isEmpty else { return true }
+        return items.allSatisfy(\.isComplete)
+    }
+
+    public static func toggleFinishLineItem(id: UUID, state: inout LeashState) {
+        guard var session = state.session,
+              let index = session.finishLineItems?.firstIndex(where: { $0.id == id }) else { return }
+        session.finishLineItems?[index].isComplete.toggle()
+        state.session = session
+    }
+
+    public static func extend(session: inout FocusSession, minutes: Int, now: Date = Date()) {
+        guard minutes > 0 else { return }
+        session.endsAt = now.addingTimeInterval(TimeInterval(minutes * 60))
     }
 
     public static func complete(state: inout LeashState) {

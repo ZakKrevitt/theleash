@@ -7,9 +7,10 @@ import LeashCore
 final class LeashCoordinator: NSObject, ObservableObject {
     @Published private(set) var state: LeashState
     @Published private(set) var runningApps: [AppIdentity] = []
-    @Published private(set) var lastExternalApp: AppIdentity?
     @Published private(set) var now = Date()
+    @Published private(set) var timeboxEnded = false
     @Published var selectedBundleIdentifiers: Set<String> = []
+    @Published var selectedAnchorBundleIdentifier: String?
     @Published var taskDraft = ""
     @Published var doneWhenDraft = ""
     @Published var durationMinutes = 25
@@ -54,8 +55,7 @@ final class LeashCoordinator: NSObject, ObservableObject {
         )
 
         refreshRunningApps()
-        rememberFrontmostExternalApp()
-        startClock()
+        selectDefaultAnchorIfNeeded()
         restoreSessionIfNeeded()
         releaseHotKey = ReleaseHotKey { [weak self] in
             self?.releaseSession()
@@ -69,6 +69,13 @@ final class LeashCoordinator: NSObject, ObservableObject {
 
     var session: FocusSession? { state.session }
     var parked: [ParkedApp] { state.parked }
+    var selectedAnchor: AppIdentity? {
+        runningApps.first { $0.bundleIdentifier == selectedAnchorBundleIdentifier }
+    }
+
+    var canCompleteSession: Bool {
+        session.map(SessionEngine.canComplete) ?? false
+    }
 
     var remainingText: String {
         guard let session else { return "0:00" }
@@ -100,7 +107,7 @@ final class LeashCoordinator: NSObject, ObservableObject {
 
     func isSelected(_ app: AppIdentity) -> Bool {
         selectedBundleIdentifiers.contains(app.bundleIdentifier) ||
-            app.bundleIdentifier == lastExternalApp?.bundleIdentifier
+            app.bundleIdentifier == selectedAnchorBundleIdentifier
     }
 
     func icon(for app: AppIdentity) -> NSImage {
@@ -108,21 +115,29 @@ final class LeashCoordinator: NSObject, ObservableObject {
         return running?.icon ?? NSWorkspace.shared.icon(for: .application)
     }
 
-    func startSession() {
+    func startSession(finishLineItems: [String]? = nil) {
         formError = nil
         do {
+            if finishLineItems == nil,
+               doneWhenDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                formError = "Write a finish line that can be answered with yes or no."
+                return
+            }
             let nextSession = try SessionEngine.start(
                 task: taskDraft,
                 doneWhen: doneWhenDraft,
                 durationMinutes: durationMinutes,
                 mode: mode,
-                anchor: lastExternalApp,
+                anchor: selectedAnchor,
                 allowedBundleIdentifiers: selectedBundleIdentifiers,
+                finishLineItems: finishLineItems,
                 now: Date()
             )
             state.session = nextSession
             state.lastStopReason = nil
             save()
+            timeboxEnded = false
+            startClock()
             overlay.start(
                 task: nextSession.task,
                 remaining: SessionEngine.remainingText(for: nextSession)
@@ -136,8 +151,10 @@ final class LeashCoordinator: NSObject, ObservableObject {
         SessionEngine.release(state: &state, reason: reason)
         save()
         overlay.stop()
+        stopClock()
+        timeboxEnded = false
         isPullingBack = false
-        rememberFrontmostExternalApp()
+        selectDefaultAnchorIfNeeded()
     }
 
     func releaseSession() {
@@ -155,14 +172,38 @@ final class LeashCoordinator: NSObject, ObservableObject {
     }
 
     func completeSession() {
-        guard let session = state.session else { return }
+        guard let session = state.session,
+              SessionEngine.canComplete(session) else { return }
         SessionEngine.complete(state: &state)
         save()
+        stopClock()
+        timeboxEnded = false
         taskDraft = ""
         doneWhenDraft = ""
         selectedBundleIdentifiers.removeAll()
         overlay.showCompletion(task: session.task)
-        rememberFrontmostExternalApp()
+        selectDefaultAnchorIfNeeded()
+    }
+
+    func toggleFinishLineItem(_ item: FinishLineItem) {
+        SessionEngine.toggleFinishLineItem(id: item.id, state: &state)
+        save()
+        if timeboxEnded, let session {
+            overlay.updateTimeboxEnded(
+                finishLine: finishLineStatus(for: session),
+                canComplete: SessionEngine.canComplete(session)
+            )
+        }
+    }
+
+    func extendTimebox(minutes: Int = 10) {
+        guard var session = state.session else { return }
+        SessionEngine.extend(session: &session, minutes: minutes)
+        state.session = session
+        save()
+        timeboxEnded = false
+        startClock()
+        overlay.start(task: session.task, remaining: SessionEngine.remainingText(for: session))
     }
 
     func returnToTask() {
@@ -196,11 +237,7 @@ final class LeashCoordinator: NSObject, ObservableObject {
               let app = identity(for: application),
               app.bundleIdentifier != leashBundleIdentifier else { return }
 
-        guard let session = state.session else {
-            lastExternalApp = app
-            selectedBundleIdentifiers.insert(app.bundleIdentifier)
-            return
-        }
+        guard let session = state.session else { return }
 
         let decision = SessionEngine.decision(
             for: app,
@@ -222,6 +259,8 @@ final class LeashCoordinator: NSObject, ObservableObject {
         overlay.showCatch(
             appName: app.name,
             task: session.task,
+            finishLine: finishLineStatus(for: session),
+            canComplete: SessionEngine.canComplete(session),
             pulledBack: decision == .pullBack,
             onComplete: { [weak self] in self?.completeSession() },
             onReturn: { [weak self] in
@@ -260,17 +299,33 @@ final class LeashCoordinator: NSObject, ObservableObject {
     }
 
     private func startClock() {
+        guard clock == nil else { return }
+        now = Date()
         clock = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.tick() }
         }
         if let clock { RunLoop.main.add(clock, forMode: .common) }
     }
 
+    private func stopClock() {
+        clock?.invalidate()
+        clock = nil
+    }
+
     private func tick() {
         now = Date()
         guard let session = state.session else { return }
         if SessionEngine.isExpired(session, now: now) {
-            endSession(reason: "time-ended")
+            stopClock()
+            timeboxEnded = true
+            overlay.showTimeboxEnded(
+                task: session.task,
+                finishLine: finishLineStatus(for: session),
+                canComplete: SessionEngine.canComplete(session),
+                onComplete: { [weak self] in self?.completeSession() },
+                onExtend: { [weak self] in self?.extendTimebox() },
+                onRelease: { [weak self] in self?.endSession(reason: "time-ended") }
+            )
             return
         }
         overlay.update(task: session.task, remaining: remainingText)
@@ -282,15 +337,19 @@ final class LeashCoordinator: NSObject, ObservableObject {
             endSession(reason: "time-ended")
         } else {
             overlay.start(task: session.task, remaining: SessionEngine.remainingText(for: session))
+            startClock()
         }
     }
 
-    private func rememberFrontmostExternalApp() {
-        guard let application = workspace.frontmostApplication,
-              let app = identity(for: application),
-              app.bundleIdentifier != leashBundleIdentifier else { return }
-        lastExternalApp = app
-        selectedBundleIdentifiers.insert(app.bundleIdentifier)
+    private func selectDefaultAnchorIfNeeded() {
+        if let selectedAnchorBundleIdentifier,
+           runningApps.contains(where: { $0.bundleIdentifier == selectedAnchorBundleIdentifier }) {
+            return
+        }
+        let frontmost = workspace.frontmostApplication.flatMap(identity(for:))
+        selectedAnchorBundleIdentifier = frontmost.flatMap { frontmost in
+            runningApps.first { $0.bundleIdentifier == frontmost.bundleIdentifier }?.bundleIdentifier
+        } ?? runningApps.first?.bundleIdentifier
     }
 
     private func refreshRunningApps() {
@@ -303,6 +362,15 @@ final class LeashCoordinator: NSObject, ObservableObject {
             }
             .values
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        selectDefaultAnchorIfNeeded()
+    }
+
+    private func finishLineStatus(for session: FocusSession) -> String? {
+        if let items = session.finishLineItems, !items.isEmpty {
+            let completed = items.filter(\.isComplete).count
+            return "\(completed) of \(items.count) finish-line steps complete"
+        }
+        return session.doneWhen.isEmpty ? nil : "Done means: \(session.doneWhen)"
     }
 
     private func identity(for application: NSRunningApplication) -> AppIdentity? {

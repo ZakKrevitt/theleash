@@ -35,6 +35,47 @@ final class SessionEngineTests: XCTestCase {
         XCTAssertThrowsError(try SessionEngine.start(
             task: "Work", durationMinutes: 181, mode: .nudge, anchor: anchor
         )) { XCTAssertEqual($0 as? SessionError, .invalidDuration) }
+
+        XCTAssertThrowsError(try SessionEngine.start(
+            task: "Work",
+            durationMinutes: 25,
+            mode: .nudge,
+            anchor: anchor,
+            finishLineItems: [" "]
+        )) { XCTAssertEqual($0 as? SessionError, .missingFinishLine) }
+    }
+
+    func testChecklistGatesCompletionUntilEveryStepIsChecked() throws {
+        let session = try SessionEngine.start(
+            task: "Ship the brief",
+            durationMinutes: 25,
+            mode: .nudge,
+            anchor: browser,
+            allowedBundleIdentifiers: [anchor.bundleIdentifier],
+            finishLineItems: [" Draft written ", "Sent to Maya"]
+        )
+        var state = LeashState(session: session)
+
+        XCTAssertEqual(session.anchor, browser)
+        XCTAssertEqual(session.finishLineItems?.map(\.text), ["Draft written", "Sent to Maya"])
+        XCTAssertFalse(SessionEngine.canComplete(session))
+
+        for item in try XCTUnwrap(session.finishLineItems) {
+            SessionEngine.toggleFinishLineItem(id: item.id, state: &state)
+        }
+
+        XCTAssertTrue(try SessionEngine.canComplete(XCTUnwrap(state.session)))
+    }
+
+    func testExtendingExpiredSessionStartsANewTimeboxFromNow() throws {
+        let now = Date(timeIntervalSince1970: 2_000)
+        var session = try SessionEngine.start(
+            task: "Work", durationMinutes: 1, mode: .nudge, anchor: anchor, now: now
+        )
+
+        SessionEngine.extend(session: &session, minutes: 10, now: now.addingTimeInterval(90))
+
+        XCTAssertEqual(session.endsAt, now.addingTimeInterval(690))
     }
 
     func testDriftDecisionRespectsModeAndAllowlist() throws {

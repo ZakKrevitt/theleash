@@ -8,9 +8,14 @@ final class OverlayModel: ObservableObject {
     @Published var remaining = "0:00"
     @Published var caughtApp: String?
     @Published var modeLabel = ""
+    @Published var finishLine: String?
+    @Published var canComplete = true
     @Published var isCompletion = false
+    @Published var isTimeboxEnded = false
     var onComplete: (() -> Void)?
     var onReturn: (() -> Void)?
+    var onExtend: (() -> Void)?
+    var onRelease: (() -> Void)?
 }
 
 struct LeashOverlayView: View {
@@ -36,6 +41,36 @@ struct LeashOverlayView: View {
                 .padding(.horizontal, 15)
                 .padding(.vertical, 11)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            } else if model.isTimeboxEnded {
+                VStack(alignment: .leading, spacing: 7) {
+                    Label("Time is up", systemImage: "timer")
+                        .font(.system(size: 13, weight: .bold))
+                    Text(model.task)
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                    if let finishLine = model.finishLine {
+                        Text(finishLine)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                    HStack(spacing: 7) {
+                        Button("Finished") { model.onComplete?() }
+                            .buttonStyle(OverlayCompletionButtonStyle())
+                            .disabled(!model.canComplete)
+                            .opacity(model.canComplete ? 1 : 0.38)
+                        Button("+10 min") { model.onExtend?() }
+                            .buttonStyle(OverlayReturnButtonStyle())
+                        Button("Release") { model.onRelease?() }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 3)
+                }
+                .padding(.horizontal, 15)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
             } else if let caughtApp = model.caughtApp {
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 7) {
@@ -51,10 +86,18 @@ struct LeashOverlayView: View {
                     Text(model.task)
                         .font(.system(size: 12, weight: .semibold))
                         .lineLimit(1)
+                    if let finishLine = model.finishLine {
+                        Text(finishLine)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
                     HStack(spacing: 7) {
-                        Button("Done") { model.onComplete?() }
+                        Button("Yes, finish") { model.onComplete?() }
                             .buttonStyle(OverlayCompletionButtonStyle())
-                        Button("Back to task") { model.onReturn?() }
+                            .disabled(!model.canComplete)
+                            .opacity(model.canComplete ? 1 : 0.38)
+                        Button("No, back to task") { model.onReturn?() }
                             .buttonStyle(OverlayReturnButtonStyle())
                     }
                     .padding(.top, 4)
@@ -79,7 +122,10 @@ struct LeashOverlayView: View {
         }
         .foregroundStyle(Color(red: 0.12, green: 0.13, blue: 0.11))
         .background(
-            RoundedRectangle(cornerRadius: model.caughtApp == nil && !model.isCompletion ? 18 : 16, style: .continuous)
+            RoundedRectangle(
+                cornerRadius: model.caughtApp == nil && !model.isCompletion && !model.isTimeboxEnded ? 18 : 16,
+                style: .continuous
+            )
                 .fill(Color(red: 0.98, green: 0.97, blue: 0.93).opacity(0.97))
                 .stroke(Color.black.opacity(0.16), lineWidth: 1)
         )
@@ -133,6 +179,8 @@ final class OverlayController {
         model.remaining = remaining
         model.caughtApp = nil
         model.isCompletion = false
+        model.isTimeboxEnded = false
+        model.finishLine = nil
         model.onComplete = nil
         model.onReturn = nil
         panel.ignoresMouseEvents = true
@@ -149,6 +197,8 @@ final class OverlayController {
     func showCatch(
         appName: String,
         task: String,
+        finishLine: String?,
+        canComplete: Bool,
         pulledBack: Bool,
         onComplete: @escaping () -> Void,
         onReturn: @escaping () -> Void
@@ -157,17 +207,21 @@ final class OverlayController {
         model.task = task
         model.caughtApp = appName
         model.isCompletion = false
+        model.isTimeboxEnded = false
+        model.finishLine = finishLine
+        model.canComplete = canComplete
         model.modeLabel = pulledBack ? "Pulled you back to the task" : "Does this belong inside the task?"
         model.onComplete = onComplete
         model.onReturn = onReturn
         panel.ignoresMouseEvents = false
-        panel.setContentSize(NSSize(width: 350, height: 132))
+        panel.setContentSize(NSSize(width: 370, height: finishLine == nil ? 132 : 154))
         reposition()
         panel.orderFrontRegardless()
 
         let workItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
             self.model.caughtApp = nil
+            self.model.finishLine = nil
             self.model.onComplete = nil
             self.model.onReturn = nil
             self.panel.ignoresMouseEvents = true
@@ -177,11 +231,44 @@ final class OverlayController {
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.5, execute: workItem)
     }
 
+    func showTimeboxEnded(
+        task: String,
+        finishLine: String?,
+        canComplete: Bool,
+        onComplete: @escaping () -> Void,
+        onExtend: @escaping () -> Void,
+        onRelease: @escaping () -> Void
+    ) {
+        resetWorkItem?.cancel()
+        model.task = task
+        model.caughtApp = nil
+        model.isCompletion = false
+        model.isTimeboxEnded = true
+        model.finishLine = finishLine
+        model.canComplete = canComplete
+        model.onComplete = onComplete
+        model.onReturn = nil
+        model.onExtend = onExtend
+        model.onRelease = onRelease
+        panel.ignoresMouseEvents = false
+        panel.setContentSize(NSSize(width: 370, height: finishLine == nil ? 122 : 144))
+        reposition()
+        panel.orderFrontRegardless()
+    }
+
+    func updateTimeboxEnded(finishLine: String?, canComplete: Bool) {
+        guard model.isTimeboxEnded else { return }
+        model.finishLine = finishLine
+        model.canComplete = canComplete
+    }
+
     func showCompletion(task: String) {
         resetWorkItem?.cancel()
         model.task = task
         model.caughtApp = nil
         model.isCompletion = true
+        model.isTimeboxEnded = false
+        model.finishLine = nil
         model.onComplete = nil
         model.onReturn = nil
         panel.ignoresMouseEvents = true
@@ -199,9 +286,10 @@ final class OverlayController {
     }
 
     func hide() {
-        guard !model.isCompletion else { return }
+        guard !model.isCompletion, !model.isTimeboxEnded else { return }
         resetWorkItem?.cancel()
         model.caughtApp = nil
+        model.finishLine = nil
         model.onComplete = nil
         model.onReturn = nil
         panel.ignoresMouseEvents = true
@@ -212,8 +300,12 @@ final class OverlayController {
         resetWorkItem?.cancel()
         model.caughtApp = nil
         model.isCompletion = false
+        model.isTimeboxEnded = false
+        model.finishLine = nil
         model.onComplete = nil
         model.onReturn = nil
+        model.onExtend = nil
+        model.onRelease = nil
         panel.ignoresMouseEvents = true
         panel.orderOut(nil)
     }
