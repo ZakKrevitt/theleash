@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#11120f" />
+    <meta
+      name="description"
+      content="Leash is a local-first macOS focus app that catches you when you drift and pulls you back to the task."
+    />
+    <meta property="og:title" content="Leash for macOS" />
+    <meta
+      property="og:description"
+      content="Tell your Mac what you are doing. It keeps you there."
+    />
+    <title>Leash for macOS | Stay with the task</title>
+    <link rel="icon" href="/leash-mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header" data-theme="dark">
+      <a class="brand" href="#top" aria-label="Leash home">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+          <circle cx="20" cy="20" r="15.5" fill="none" stroke="currentColor" stroke-width="3" />
+          <rect x="14" y="18" width="13" height="4" rx="2" fill="#E65335" transform="rotate(35 20.5 20)" />
+        </svg>
+        <span>Leash</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#how-it-works">How it works</a>
+        <a class="nav-cta" href="#pricing">Name your price</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top" aria-labelledby="hero-title" data-theme="dark">
+        <div class="hero-copy">
+          <p class="eyebrow">A focus tool for macOS</p>
+          <h1 id="hero-title">
+            Tell your Mac what you’re doing.
+            <em>It keeps you there.</em>
+          </h1>
+          <p class="hero-deck">
+            Leash notices when you leave the task, saves the distraction for later, and gives you a clean way back.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-acid" href="#pricing">Pay what you want</a>
+            <span class="launch-note">Launch week only</span>
+          </div>
+        </div>
+
+        <div class="product-stage" aria-label="Leash product preview">
+          <div class="stage-glow" aria-hidden="true"></div>
+          <div class="app-fan" aria-hidden="true">
+            <div class="app-tile app-tile-1"><span class="tile-dot"></span><strong>Mail</strong></div>
+            <div class="app-tile app-tile-2"><span class="tile-lines"></span><strong>Notes</strong></div>
+            <div class="app-tile app-tile-3 anchor-tile"><span class="tile-doc"></span><strong>Draft</strong><small>Anchor app</small></div>
+            <div class="app-tile app-tile-4"><span class="tile-bubble"></span><strong>Messages</strong></div>
+            <div class="app-tile app-tile-5"><span class="tile-grid"></span><strong>Browser</strong></div>
+          </div>
+
+          <div class="leash-popover" aria-hidden="true">
+            <div class="window-dots"><i></i><i></i><i></i></div>
+            <div class="popover-heading">
+              <span class="status-dot"></span>
+              <strong>Caught Messages</strong>
+            </div>
+            <p>Does this belong inside the task?</p>
+            <div class="task-line">
+              <span>Finish the project brief</span>
+              <b>18:42</b>
+            </div>
+            <div class="popover-actions"><span>Done</span><strong>Back to task</strong></div>
+          </div>
+        </div>
+
+        <div class="proof-strip" aria-label="Leash privacy facts">
+          <div><strong>0</strong><span>special permissions</span></div>
+          <div><strong>0</strong><span>accounts</span></div>
+          <div><strong>100%</strong><span>local on your Mac</span></div>
+        </div>
+      </section>
+
+      <section class="problem" aria-labelledby="problem-title">
+        <p class="section-number">01 / THE PROBLEM</p>
+        <div class="problem-grid">
+          <h2 id="problem-title">A five-second detour becomes <em>forty minutes.</em></h2>
+          <div class="problem-copy">
+            <p>
+              The hard part is rarely knowing what matters. It is noticing the exact moment your attention slips away.
+            </p>
+            <p>
+              Leash turns that moment into a choice, before the new app becomes the new plan.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="how" id="how-it-works" aria-labelledby="how-title">
+        <div class="section-heading">
+          <p class="section-number">02 / HOW IT WORKS</p>
+          <h2 id="how-title">A tiny contract with your future self.</h2>
+        </div>
+
+        <ol class="steps">
+          <li>
+            <span class="step-number">1</span>
+            <div>
+              <h3>Name the task.</h3>
+              <p>Open the app where the work belongs, say what done means, and choose a timebox.</p>
+            </div>
+            <div class="step-visual task-card" aria-hidden="true">
+              <span>What are you doing?</span>
+              <strong>Finish the project brief</strong>
+              <small>Done when: The draft is sent</small>
+            </div>
+          </li>
+          <li>
+            <span class="step-number">2</span>
+            <div>
+              <h3>Choose the boundary.</h3>
+              <p>Keep the apps the task needs inside the leash. Everything else counts as drift.</p>
+            </div>
+            <div class="step-visual app-list" aria-hidden="true">
+              <span><i class="mini-icon acid"></i>Pages <b>Anchor</b></span>
+              <span><i class="mini-icon paper"></i>Preview <b>Allowed</b></span>
+              <span><i class="mini-icon catch"></i>Messages <b>Outside</b></span>
+            </div>
+          </li>
+          <li>
+            <span class="step-number">3</span>
+            <div>
+              <h3>Get caught early.</h3>
+              <p>Leash can ask whether the detour belongs, or hide it and pull you back automatically.</p>
+            </div>
+            <div class="step-visual mode-switch" aria-hidden="true">
+              <span class="selected">Catch me</span><span>Pull me back</span>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="behavior" aria-labelledby="behavior-title" data-theme="dark">
+        <div>
+          <p class="section-number">03 / BUILT TO DISAPPEAR</p>
+          <h2 id="behavior-title">Quiet while you work. Direct when you wander.</h2>
+        </div>
+        <div class="behavior-copy">
+          <p>
+            No dashboard to maintain. No streak to protect. The companion stays hidden inside your chosen apps and only appears when it has something useful to say.
+          </p>
+          <div class="behavior-tags" aria-label="Product qualities">
+            <span>No guilt</span><span>No gamification</span><span>No feed</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="privacy" aria-labelledby="privacy-title">
+        <div class="privacy-lockup">
+          <p class="section-number">04 / PRIVATE BY DEFAULT</p>
+          <h2 id="privacy-title">Your attention is not our dataset.</h2>
+          <p>
+            Leash reads app-level switches, not what is inside your apps. Task text and caught app names stay in local macOS preferences.
+          </p>
+          <a href="/privacy.html">Read the plain-language privacy policy</a>
+        </div>
+        <ul class="privacy-list">
+          <li><span>01</span> No analytics or telemetry</li>
+          <li><span>02</span> No screen, clipboard, or keystroke access</li>
+          <li><span>03</span> No Accessibility permission</li>
+          <li><span>04</span> No account and no network client</li>
+        </ul>
+      </section>
+
+      <section class="pricing" id="pricing" aria-labelledby="pricing-title">
+        <div class="pricing-intro">
+          <p class="section-number">05 / LAUNCH WEEK</p>
+          <h2 id="pricing-title">Pay what feels fair.</h2>
+          <p>
+            Pick any price, including zero. You get the same complete app either way.
+          </p>
+          <div class="countdown" aria-live="polite">
+            <span class="countdown-label">Launch pricing ends</span>
+            <strong id="countdown">Calculating…</strong>
+          </div>
+        </div>
+
+        <div class="price-card">
+          <div class="price-card-head">
+            <div>
+              <span>Leash for macOS</span>
+              <strong>One-time purchase</strong>
+            </div>
+            <svg viewBox="0 0 40 40" aria-hidden="true">
+              <circle cx="20" cy="20" r="15.5" fill="none" stroke="currentColor" stroke-width="3" />
+              <rect x="14" y="18" width="13" height="4" rx="2" fill="#E65335" transform="rotate(35 20.5 20)" />
+            </svg>
+          </div>
+
+          <form id="price-form" novalidate>
+            <fieldset>
+              <legend>Choose your price</legend>
+              <div class="price-options">
+                <button type="button" data-amount="0">€0 <small>Try it</small></button>
+                <button type="button" data-amount="5">€5 <small>Nice</small></button>
+                <button type="button" class="selected" data-amount="12" aria-pressed="true">€12 <small>Suggested</small></button>
+                <button type="button" data-amount="20">€20 <small>Supporter</small></button>
+              </div>
+            </fieldset>
+
+            <label class="custom-price" for="custom-amount">
+              <span>Or enter another amount</span>
+              <span class="currency-input"><b>€</b><input id="custom-amount" name="amount" type="number" min="0" max="100" step="1" inputmode="decimal" placeholder="Your price" /></span>
+            </label>
+
+            <div class="purchase-summary">
+              <span>You pay once</span>
+              <strong id="price-total">€12</strong>
+            </div>
+            <button class="purchase-button" type="submit" id="purchase-button">
+              Pay €12 and download
+            </button>
+            <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+          </form>
+
+          <ul class="includes">
+            <li>Native universal Mac app</li>
+            <li>Catch me and Pull me back modes</li>
+            <li>Updates for this release</li>
+          </ul>
+          <p class="compatibility">Requires macOS 14 or later. Current download is a developer preview. <a href="/download/Leash-macOS-v0.1.0.zip.sha256">Verify SHA-256</a></p>
+        </div>
+      </section>
+    </main>
+
+    <footer data-theme="dark">
+      <div class="footer-title">Stay with <em>the thing.</em></div>
+      <div class="footer-row">
+        <a class="brand" href="#top">
+          <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+            <circle cx="20" cy="20" r="15.5" fill="none" stroke="currentColor" stroke-width="3" />
+            <rect x="14" y="18" width="13" height="4" rx="2" fill="#E65335" transform="rotate(35 20.5 20)" />
+          </svg>
+          <span>Leash</span>
+        </a>
+        <div class="footer-links">
+          <a href="mailto:zak.krevitt@gmail.com">Support</a>
+          <a href="/privacy.html">Privacy</a>
+          <a href="/security.html">Security</a>
+        </div>
+        <span>© 2026 Leash</span>
+      </div>
+    </footer>
+  </body>
+</html>

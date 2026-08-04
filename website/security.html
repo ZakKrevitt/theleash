@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f3f0e8" />
+    <meta name="description" content="Leash security policy." />
+    <title>Security | Leash</title>
+    <link rel="icon" href="/leash-mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/legal.css" />
+  </head>
+  <body>
+    <header class="legal-header">
+      <a class="brand" href="/">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+          <circle cx="20" cy="20" r="15.5" fill="none" stroke="currentColor" stroke-width="3" />
+          <rect x="14" y="18" width="13" height="4" rx="2" fill="#E65335" transform="rotate(35 20.5 20)" />
+        </svg>
+        <span>Leash</span>
+      </a>
+      <a href="/">Back to Leash</a>
+    </header>
+    <main class="legal-page">
+      <p class="section-number">LEGAL / SECURITY</p>
+      <h1>Security Policy</h1>
+      <p class="lead">Security fixes are provided for the latest published Leash release.</p>
+
+      <h2>Reporting a vulnerability</h2>
+      <p>Send security reports to <a href="mailto:zak.krevitt@gmail.com">zak.krevitt@gmail.com</a>. Include the affected version, reproduction steps, and impact. Please do not publish an exploitable report before a fix is available.</p>
+
+      <h2>Identifying an official build</h2>
+      <p>Leash is open source, so third parties can compile or modify it. An official binary must have bundle identifier <code>com.zakkrevitt.leash</code>, Apple Team ID <code>QWT6LQP2GH</code>, a valid Developer ID signature and Apple notarization, an embedded source commit, and a matching published SHA-256 checksum.</p>
+
+      <h2>Data handling</h2>
+      <p>Leash has no account, server, analytics, telemetry, crash reporter, or network client. Task state and app-level identities are stored only in local macOS preferences. Leash does not request Accessibility permission or read focused window titles, URLs, page contents, documents, screenshots, clipboard data, or keystrokes.</p>
+    </main>
+  </body>
+</html>
