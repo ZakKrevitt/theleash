@@ -218,6 +218,8 @@ final class OverlayController {
         reposition()
         panel.orderFrontRegardless()
 
+        guard pulledBack else { return }
+
         let workItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
             self.model.caughtApp = nil

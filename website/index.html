@@ -146,7 +146,7 @@
           <h2 id="behavior-title">Out of sight until you switch apps.</h2>
         </div>
         <div class="behavior-copy">
-          <p>
+          <p id="pricing-copy">
             Leash stays hidden while you work in the apps you chose. Switch somewhere else and it asks what happened or pulls you back. That is the whole job.
           </p>
         </div>
@@ -192,8 +192,14 @@
             </svg>
           </div>
 
-          <form id="price-form" novalidate>
-            <fieldset>
+          <div class="release-status" id="release-status" role="status" hidden>
+            <strong>Download paused</strong>
+            <p>The app is built. The public installer is waiting for Apple notarization, so it stays offline instead of asking you to bypass macOS security.</p>
+            <a href="mailto:zak.krevitt@gmail.com?subject=Leash%20release">Tell me when it is ready</a>
+          </div>
+
+          <form id="price-form" aria-busy="true" novalidate>
+            <fieldset disabled>
               <legend>Choose your price</legend>
               <div class="price-options">
                 <button type="button" data-amount="0">€0</button>
@@ -212,8 +218,8 @@
               <span>You pay once</span>
               <strong id="price-total">€12</strong>
             </div>
-            <button class="purchase-button" type="submit" id="purchase-button">
-              Pay €12 and download
+            <button class="purchase-button" type="submit" id="purchase-button" disabled>
+              Checking release…
             </button>
             <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
           </form>
@@ -223,7 +229,7 @@
             <li>Catch me and Pull me back modes</li>
             <li>Updates for this release</li>
           </ul>
-          <p class="compatibility">Requires macOS 14 or later. Current download is a developer preview. <a href="/download/Leash-macOS-v0.1.0.dmg.sha256">Verify SHA-256</a></p>
+          <p class="compatibility" id="compatibility">Requires macOS 14 or later. Downloads open only for a Developer ID signed and notarized release.</p>
         </div>
       </section>
     </main>

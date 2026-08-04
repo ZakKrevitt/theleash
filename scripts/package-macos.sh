@@ -1,5 +1,6 @@
 #!/bin/zsh
 set -euo pipefail
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin"
 
 PROJECT_ROOT="${0:A:h:h}"
 APP_NAME="Leash"
@@ -14,6 +15,7 @@ DMG_PATH="$PROJECT_ROOT/dist/Leash-macOS-v$VERSION.dmg"
 DMG_VOLUME_NAME="Leash $VERSION"
 GUIDE_PATH="$PROJECT_ROOT/website/guide.html"
 BUILD_DIR="$PROJECT_ROOT/.build/apple/Products/Release"
+EXPECTED_TEAM_ID="QWT6LQP2GH"
 RELEASE_MODE=false
 DMG_STAGING_DIR=""
 
@@ -50,6 +52,8 @@ elif [[ -n "${1:-}" ]]; then
     exit 64
 fi
 
+cd "$PROJECT_ROOT"
+
 if $RELEASE_MODE; then
     : "${LEASH_SIGNING_IDENTITY:?Set LEASH_SIGNING_IDENTITY to a Developer ID Application identity}"
     : "${LEASH_NOTARY_PROFILE:?Set LEASH_NOTARY_PROFILE to a notarytool Keychain profile}"
@@ -57,9 +61,23 @@ if $RELEASE_MODE; then
         echo "LEASH_SIGNING_IDENTITY must name a Developer ID Application certificate." >&2
         exit 65
     fi
+
+    if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then
+        echo "Release builds require a clean Git worktree." >&2
+        exit 66
+    fi
+
+    expected_tag="v$VERSION"
+    if [[ "$(git tag --points-at HEAD --list "$expected_tag")" != "$expected_tag" ]]; then
+        echo "Release commit must be tagged $expected_tag." >&2
+        exit 67
+    fi
 fi
 
-cd "$PROJECT_ROOT"
+SOURCE_COMMIT="$(git rev-parse --verify HEAD)"
+if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then
+    SOURCE_COMMIT="$SOURCE_COMMIT-dirty"
+fi
 swift build -c release --arch arm64 --arch x86_64
 
 rm -rf "$APP_DIR"
@@ -67,6 +85,7 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 cp "$BUILD_DIR/Leash" "$MACOS_DIR/Leash"
 cp "$PROJECT_ROOT/assets/Leash.icns" "$RESOURCES_DIR/Leash.icns"
 cp "$PLIST_PATH" "$CONTENTS_DIR/Info.plist"
+plutil -insert LeashSourceCommit -string "$SOURCE_COMMIT" "$CONTENTS_DIR/Info.plist"
 
 if $RELEASE_MODE; then
     codesign \
@@ -80,6 +99,23 @@ else
 fi
 
 codesign --verify --deep --strict --verbose=2 "$APP_DIR"
+
+if $RELEASE_MODE; then
+    signature_details="$(codesign -d --verbose=4 "$APP_DIR" 2>&1)"
+    if [[ "$signature_details" != *"TeamIdentifier=$EXPECTED_TEAM_ID"* ]]; then
+        echo "Release signature is not owned by Apple team $EXPECTED_TEAM_ID." >&2
+        exit 68
+    fi
+    if [[ "$signature_details" != *"flags=0x10000(runtime)"* ]]; then
+        echo "Release signature does not enable Hardened Runtime." >&2
+        exit 69
+    fi
+    if [[ "$signature_details" != *"Timestamp="* ]]; then
+        echo "Release signature does not contain a secure timestamp." >&2
+        exit 70
+    fi
+fi
+
 lipo "$MACOS_DIR/Leash" -verify_arch arm64 x86_64
 plutil -lint "$CONTENTS_DIR/Info.plist"
 

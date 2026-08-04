@@ -4,10 +4,13 @@
 
 - [ ] Install a valid Developer ID Application certificate.
 - [ ] Store App Store Connect notarization credentials in a Keychain profile.
+- [ ] Confirm the Developer ID Application certificate belongs to Apple Team ID `QWT6LQP2GH`.
+- [ ] Commit all release changes and tag the commit with the exact app version, such as `v0.1.0`.
 - [ ] Run `./scripts/qa-macos.sh` successfully.
 - [ ] Run `LEASH_SIGNING_IDENTITY="Developer ID Application: NAME (TEAMID)" LEASH_NOTARY_PROFILE="leash-notary" ./scripts/package-macos.sh --release` successfully.
 - [ ] Confirm `spctl` accepts the packaged app and DMG.
 - [ ] Confirm the SHA-256 checksums match the DMG and ZIP.
+- [ ] Confirm `LeashSourceCommit` matches the tagged source commit.
 - [ ] Open the DMG, drag Leash to Applications, and launch it in a clean macOS user account after downloading through a browser.
 - [ ] Confirm the DMG contains Leash, the Applications shortcut, and the offline user guide.
 - [ ] Complete the manual QA matrix below.
@@ -15,9 +18,9 @@
 
 ## Manual QA matrix
 
-- [ ] First launch explains behavior, privacy, Accessibility, and the emergency release shortcut.
-- [ ] Continue works with Accessibility disabled.
-- [ ] Optional Accessibility request opens the macOS permission flow.
+- [ ] First launch explains behavior, privacy, and the emergency release shortcut.
+- [ ] The app does not request Accessibility, Screen Recording, Input Monitoring, or Automation access.
+- [ ] Source and binary review find no analytics, telemetry, crash reporter, or network client.
 - [ ] A session cannot start without a task or anchor app.
 - [ ] The companion remains hidden while the anchor or another allowed app is active.
 - [ ] Catch me shows the drift prompt without hiding the unrelated app.
@@ -39,6 +42,7 @@
 - [ ] Make the DMG the primary website download.
 - [ ] Download the uploaded artifact and verify its checksum.
 - [ ] Open the downloaded app and repeat the critical smoke test.
+- [ ] Set `LEASH_DOWNLOADS_ENABLED=true` only after the downloaded DMG passes Gatekeeper.
 - [ ] Publish the privacy policy and release notes beside the download.
 - [ ] Keep the previous notarized archive available for rollback.
 
@@ -51,3 +55,5 @@ Replace the download with the previous notarized version if any of these occur:
 - The app crashes during ordinary session setup or intervention.
 - Gatekeeper rejects the downloaded archive.
 - User data outside Leash is changed or lost.
+
+Remove `LEASH_DOWNLOADS_ENABLED` immediately while a release is rolled back.

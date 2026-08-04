@@ -9,8 +9,9 @@ Leash should feel like a calm physical tool, not a productivity dashboard. The f
 - Paper: `#F3F0E8`
 - Panel: `#FCFAF2`
 - Ink: `#1F211D`
-- Muted: `#6E7167`
+- Muted: `#66695F`
 - Catch: `#E65335`
+- Catch text: `#B53D29`
 - Active tether: `#D9FA64`
 
 ## Type

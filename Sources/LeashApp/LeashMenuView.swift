@@ -5,8 +5,9 @@ private enum Palette {
     static let paper = Color(red: 0.95, green: 0.94, blue: 0.90)
     static let panel = Color(red: 0.99, green: 0.98, blue: 0.95)
     static let ink = Color(red: 0.12, green: 0.13, blue: 0.11)
-    static let muted = Color(red: 0.43, green: 0.44, blue: 0.40)
+    static let muted = Color(red: 0.40, green: 0.41, blue: 0.37)
     static let accent = Color(red: 0.90, green: 0.33, blue: 0.21)
+    static let accentText = Color(red: 0.71, green: 0.24, blue: 0.16)
     static let acid = Color(red: 0.85, green: 0.98, blue: 0.39)
 }
 
@@ -41,10 +42,10 @@ struct LeashMenuView: View {
                 Button("Release now") { coordinator.releaseSession() }
                     .buttonStyle(.plain)
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Palette.accent)
-                Text("⌃⌥⌘L")
+                    .foregroundStyle(Palette.accentText)
+                Text(shortcutLabel)
                     .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Palette.muted)
+                    .foregroundStyle(coordinator.releaseHotKeyDisplayName == nil ? Palette.accentText : Palette.muted)
             } else {
                 Text("v\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev")")
                     .font(.system(size: 9, weight: .semibold, design: .monospaced))
@@ -60,6 +61,14 @@ struct LeashMenuView: View {
         .frame(height: 36)
         .background(Palette.panel.opacity(0.72))
         .overlay(alignment: .top) { Divider() }
+    }
+
+    private var shortcutLabel: String {
+        switch coordinator.releaseHotKeyDisplayName {
+        case "Control-Option-Command-L": "⌃⌥⌘L"
+        case "Control-Option-Command-Escape": "⌃⌥⌘Esc"
+        default: "Shortcut unavailable"
+        }
     }
 
     private var header: some View {
@@ -89,7 +98,6 @@ struct LeashMenuView: View {
 
 private struct OnboardingView: View {
     @ObservedObject var coordinator: LeashCoordinator
-    @State private var includeWindowTitles = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -97,6 +105,8 @@ private struct OnboardingView: View {
                 Text("A boundary for your attention.")
                     .font(.system(size: 27, weight: .bold))
                     .tracking(-0.8)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text("Leash notices when you leave the apps chosen for a task, then helps you return.")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Palette.muted)
@@ -121,26 +131,22 @@ private struct OnboardingView: View {
                 )
             }
 
-            Toggle(isOn: $includeWindowTitles) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Remember focused window titles")
-                        .font(.system(size: 12, weight: .bold))
-                    Text("Optional. macOS will ask for Accessibility permission.")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Palette.muted)
-                }
-            }
-            .toggleStyle(.switch)
-
             Button("Continue") {
-                coordinator.finishOnboarding(requestAccessibility: includeWindowTitles)
+                coordinator.finishOnboarding()
             }
             .buttonStyle(PrimaryButtonStyle())
 
-            Text("Emergency release: \(ReleaseHotKey.displayName)")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(Palette.muted)
-                .frame(maxWidth: .infinity, alignment: .center)
+            if let hotKey = coordinator.releaseHotKeyDisplayName {
+                Text("Emergency release: \(hotKey)")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Palette.muted)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            } else {
+                Label("Global shortcut unavailable. Release and Quit remain in the menu.", systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Palette.accentText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 20)
@@ -212,6 +218,25 @@ private struct SetupView: View {
                 .padding(.horizontal, 12)
                 .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
                 .background(Palette.panel, in: RoundedRectangle(cornerRadius: 10))
+            } else if coordinator.state.lastStopReason == "time-ended" {
+                statusMessage(
+                    icon: "timer",
+                    text: "The timebox ended. Start a new leash when you're ready.",
+                    color: Palette.muted
+                )
+            } else if coordinator.state.lastStopReason == "invalid-state" {
+                statusMessage(
+                    icon: "exclamationmark.shield.fill",
+                    text: "The saved session could not be restored. Nothing was blocked.",
+                    color: Palette.accentText
+                )
+            }
+
+            if !coordinator.parked.isEmpty {
+                ParkedList(coordinator: coordinator, allowsOpening: true)
+                    .padding(12)
+                    .background(Palette.panel, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.black.opacity(0.10)))
             }
 
             Text("What are you doing?")
@@ -320,7 +345,16 @@ private struct SetupView: View {
                 if coordinator.runningApps.isEmpty {
                     Text("No open apps found. Open an app and try again.")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Palette.accent)
+                        .foregroundStyle(Palette.accentText)
+                } else if coordinator.selectedAnchorIsBrowser,
+                          let anchor = coordinator.selectedAnchor {
+                    Label(
+                        "Leash sees app switches. Tabs inside \(anchor.name) stay inside the boundary.",
+                        systemImage: "rectangle.on.rectangle"
+                    )
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
@@ -374,19 +408,25 @@ private struct SetupView: View {
             if let error = coordinator.formError {
                 Text(error)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Palette.accent)
+                    .foregroundStyle(Palette.accentText)
+                    .accessibilityLabel("Session setup error: \(error)")
             }
 
-            if !coordinator.accessibilityTrusted {
-                Button("Enable focused window awareness") { coordinator.requestAccessibility() }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Palette.muted)
-                    .help("Optional. Adds window titles to Later. App-level enforcement already works.")
-            }
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 20)
+    }
+
+    private func statusMessage(icon: String, text: String, color: Color) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .foregroundStyle(color)
+            Text(text)
+                .font(.system(size: 12, weight: .bold))
+        }
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
+        .background(Palette.panel, in: RoundedRectangle(cornerRadius: 10))
     }
 
     private func field<Content: View>(
@@ -569,21 +609,19 @@ private struct ActiveSessionView: View {
                     }
                 }
 
-                if let current = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
-                   !session.allowedBundleIdentifiers.contains(current),
-                   current != Bundle.main.bundleIdentifier {
-                    Button("Allow current app for this leash") { coordinator.allowCurrentApp() }
+                if let app = coordinator.currentAppToAllow {
+                    Button("Allow \(app.name) for this leash") { coordinator.allowCurrentApp() }
                         .buttonStyle(.plain)
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(Palette.muted)
                 }
 
-                ParkedList(coordinator: coordinator)
+                ParkedList(coordinator: coordinator, allowsOpening: false)
 
                 Button("End leash") { coordinator.endSession() }
                     .buttonStyle(.plain)
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Palette.accent)
+                    .foregroundStyle(Palette.accentText)
             }
         }
         .padding(.horizontal, 20)
@@ -593,11 +631,12 @@ private struct ActiveSessionView: View {
 
 private struct ParkedList: View {
     @ObservedObject var coordinator: LeashCoordinator
+    let allowsOpening: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("LATER  \(coordinator.parked.count)")
+                Text("CAUGHT APPS  \(coordinator.parked.count)")
                     .font(.system(size: 10, weight: .black))
                     .tracking(1)
                 Spacer()
@@ -610,7 +649,7 @@ private struct ParkedList: View {
             }
 
             if coordinator.parked.isEmpty {
-                Text("Distractions you catch will wait here.")
+                Text("Apps you catch will wait here.")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Palette.muted)
             } else {
@@ -622,14 +661,19 @@ private struct ParkedList: View {
                         VStack(alignment: .leading, spacing: 1) {
                             Text(item.app.name)
                                 .font(.system(size: 11, weight: .bold))
-                            if let title = item.windowTitle, !title.isEmpty {
-                                Text(title)
-                                    .font(.system(size: 9, weight: .medium))
-                                    .foregroundStyle(Palette.muted)
-                                    .lineLimit(1)
-                            }
                         }
                         Spacer()
+                        if allowsOpening {
+                            Button("Open") {
+                                coordinator.openParked(item)
+                            }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Palette.ink)
+                            .frame(minWidth: 34, minHeight: 24)
+                            .disabled(!coordinator.canOpenParked(item))
+                            .opacity(coordinator.canOpenParked(item) ? 1 : 0.45)
+                        }
                         Button {
                             coordinator.removeParked(item)
                         } label: {
@@ -638,6 +682,8 @@ private struct ParkedList: View {
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(Palette.muted)
+                        .frame(width: 24, height: 24)
+                        .accessibilityLabel("Remove \(item.app.name) from caught apps")
                     }
                     .padding(.vertical, 3)
                 }

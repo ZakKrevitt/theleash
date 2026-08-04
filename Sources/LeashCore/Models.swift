@@ -1,14 +1,53 @@
 import Foundation
 
+public enum InputLimits {
+    public static let taskLength = 240
+    public static let doneWhenLength = 480
+    public static let appNameLength = 160
+    public static let bundleIdentifierLength = 255
+    public static let allowedAppCount = 128
+    public static let parkedItemCount = 50
+    public static let finishLineItemCount = 12
+    public static let finishLineItemLength = 240
+    public static let maximumSessionDuration: TimeInterval = 3 * 60 * 60
+
+    public static func text(_ value: String, maximumLength: Int, trimmingWhitespace: Bool = true) -> String {
+        let bounded = String(value.prefix(maximumLength))
+        return trimmingWhitespace
+            ? bounded.trimmingCharacters(in: .whitespacesAndNewlines)
+            : bounded
+    }
+}
+
 public struct AppIdentity: Codable, Hashable, Identifiable, Sendable {
     public let bundleIdentifier: String
     public let name: String
 
     public var id: String { bundleIdentifier }
 
+    public var isWebBrowser: Bool {
+        let browserBundleIdentifiers = [
+            "com.apple.Safari",
+            "com.brave.Browser",
+            "com.google.Chrome",
+            "com.microsoft.edgemac",
+            "com.operasoftware.Opera",
+            "com.vivaldi.Vivaldi",
+            "company.thebrowser.Browser",
+            "org.mozilla.firefox",
+            "org.mozilla.firefoxdeveloperedition",
+        ]
+        return browserBundleIdentifiers.contains {
+            bundleIdentifier == $0 || bundleIdentifier.hasPrefix("\($0).")
+        }
+    }
+
     public init(bundleIdentifier: String, name: String) {
-        self.bundleIdentifier = bundleIdentifier
-        self.name = name
+        self.bundleIdentifier = InputLimits.text(
+            bundleIdentifier,
+            maximumLength: InputLimits.bundleIdentifierLength
+        )
+        self.name = InputLimits.text(name, maximumLength: InputLimits.appNameLength)
     }
 }
 
@@ -38,7 +77,7 @@ public struct FinishLineItem: Codable, Equatable, Identifiable, Sendable {
 
     public init(id: UUID = UUID(), text: String, isComplete: Bool = false) {
         self.id = id
-        self.text = text
+        self.text = InputLimits.text(text, maximumLength: InputLimits.finishLineItemLength)
         self.isComplete = isComplete
     }
 }
@@ -83,18 +122,15 @@ public struct FocusSession: Codable, Equatable, Sendable {
 public struct ParkedApp: Codable, Equatable, Identifiable, Sendable {
     public let id: UUID
     public let app: AppIdentity
-    public let windowTitle: String?
     public let parkedAt: Date
 
     public init(
         id: UUID = UUID(),
         app: AppIdentity,
-        windowTitle: String? = nil,
         parkedAt: Date = Date()
     ) {
         self.id = id
         self.app = app
-        self.windowTitle = windowTitle
         self.parkedAt = parkedAt
     }
 }

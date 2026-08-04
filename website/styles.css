@@ -2,8 +2,9 @@
   --paper: #f3f0e8;
   --panel: #fcfaf2;
   --ink: #1f211d;
-  --muted: #6e7167;
+  --muted: #66695f;
   --catch: #e65335;
+  --catch-text: #b53d29;
   --acid: #d9fa64;
   --night: #11120f;
   --line: rgba(31, 33, 29, 0.18);
@@ -11,6 +12,10 @@
   --radius-sm: 12px;
   --radius: 20px;
   --ease: cubic-bezier(0.2, 0.75, 0.2, 1);
+}
+
+[hidden] {
+  display: none !important;
 }
 
 * {
@@ -857,19 +862,44 @@ legend,
 }
 
 .purchase-button:disabled {
-  cursor: wait;
+  cursor: not-allowed;
   opacity: 0.65;
 }
 
 .form-status {
   min-height: 23px;
   margin: 10px 0 0;
-  color: var(--catch);
+  color: var(--catch-text);
   font-size: 12px;
 }
 
 .form-status.success {
   color: #47753e;
+}
+
+.release-status {
+  margin: 26px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--catch);
+  border-radius: 12px;
+  background: var(--paper);
+}
+
+.release-status strong {
+  font-size: 18px;
+}
+
+.release-status p {
+  margin: 8px 0 14px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.release-status a {
+  font-size: 14px;
+  font-weight: 750;
+  text-underline-offset: 4px;
 }
 
 .includes {

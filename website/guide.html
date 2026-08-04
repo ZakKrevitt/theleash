@@ -11,7 +11,7 @@
         --paper: #f3f0e8;
         --panel: #fcfaf2;
         --ink: #1f211d;
-        --muted: #6e7167;
+        --muted: #66695f;
         --catch: #e65335;
         --acid: #d9fa64;
         --line: rgba(31, 33, 29, 0.18);
@@ -210,6 +210,7 @@
 
       <section id="install">
         <h2>Install Leash</h2>
+        <div class="note"><strong>Use the official release only.</strong> The download page stays closed until the installer is Developer ID signed, notarized by Apple, and accepted by Gatekeeper.</div>
         <ol class="steps">
           <li>Download <strong>Leash-macOS-v0.1.0.dmg</strong>.</li>
           <li>Open the disk image and drag <strong>Leash</strong> onto the <strong>Applications</strong> shortcut.</li>
@@ -236,11 +237,11 @@
         <div class="mode-grid">
           <article class="mode">
             <h3>Catch me</h3>
-            <p>Leash shows a prompt beside the cursor when you enter an unrelated app. The app stays open. The catch is saved in Later so you can return to it after the task.</p>
+            <p>Leash shows a prompt beside the cursor when you enter an unrelated app. The prompt waits for your answer. The app stays open, and its name is saved in Caught Apps.</p>
           </article>
           <article class="mode">
             <h3>Pull me back</h3>
-            <p>Leash saves the unrelated app in Later, hides it, and brings the anchor forward. Hiding is reversible. The app is not quit and its work is not discarded.</p>
+            <p>Leash saves the unrelated app in Caught Apps, hides it, and brings the anchor forward. Hiding is reversible. The app is not quit and its work is not discarded.</p>
           </article>
         </div>
       </section>
@@ -250,8 +251,8 @@
         <p>The companion stays out of sight while you work in the anchor or another allowed app. It appears when Leash catches a drift, the timer ends, or you finish.</p>
         <h3>Need another app?</h3>
         <p>Open Leash from the menu bar and add the app to the active session. Keep the list narrow enough that the leash still means something.</p>
-        <h3>Want something from Later?</h3>
-        <p>Later records the app where a catch happened, not the page, tab, window title, or document. Use it as a short reminder list after the current task ends.</p>
+        <h3>Want something from Caught Apps?</h3>
+        <p>Caught Apps records the app where a catch happened, not the page, tab, window title, or document. After the task, open any caught app that is still running or clear the list.</p>
       </section>
 
       <section id="finish">
@@ -295,13 +296,13 @@ spctl --assess --type execute --verbose=4 /Applications/Leash.app</code></pre>
         <ol class="steps">
           <li>Choose <strong>Quit</strong> from the Leash menu.</li>
           <li>Move <strong>/Applications/Leash.app</strong> to the Trash.</li>
-          <li>To remove Leash preferences and Later data, open Terminal and run <code>defaults delete com.zakkrevitt.leash</code>.</li>
+          <li>To remove Leash preferences and Caught Apps data, open Terminal and run <code>defaults delete com.zakkrevitt.leash</code>.</li>
         </ol>
       </section>
 
       <section id="privacy">
         <h2>Privacy</h2>
-        <p>Leash stores the active session and Later app identities in local macOS preferences. It does not read window titles, URLs, page contents, documents, screenshots, clipboard data, or keystrokes. It contains no account, analytics, telemetry, crash reporter, or network client.</p>
+        <p>Leash stores the active session and Caught Apps identities in local macOS preferences. It does not read window titles, URLs, page contents, documents, screenshots, clipboard data, or keystrokes. It contains no account, analytics, telemetry, crash reporter, or network client.</p>
       </section>
 
       <footer>

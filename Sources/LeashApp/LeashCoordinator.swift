@@ -1,5 +1,4 @@
 import AppKit
-import ApplicationServices
 import Combine
 import LeashCore
 
@@ -17,6 +16,7 @@ final class LeashCoordinator: NSObject, ObservableObject {
     @Published var mode: LeashMode = .nudge
     @Published var formError: String?
     @Published private(set) var hasCompletedOnboarding: Bool
+    @Published private(set) var releaseHotKeyDisplayName: String?
 
     private let store = StateStore()
     private let overlay = OverlayController()
@@ -24,6 +24,7 @@ final class LeashCoordinator: NSObject, ObservableObject {
     private var clock: Timer?
     private var isPullingBack = false
     private var releaseHotKey: ReleaseHotKey?
+    private var firstLaunchWindow: FirstLaunchWindowController?
 
     private var leashBundleIdentifier: String {
         Bundle.main.bundleIdentifier ?? "com.zakkrevitt.leash"
@@ -32,6 +33,7 @@ final class LeashCoordinator: NSObject, ObservableObject {
     override init() {
         state = store.load()
         hasCompletedOnboarding = store.hasCompletedOnboarding
+        releaseHotKeyDisplayName = nil
         super.init()
 
         let center = workspace.notificationCenter
@@ -55,10 +57,14 @@ final class LeashCoordinator: NSObject, ObservableObject {
         )
 
         refreshRunningApps()
-        selectDefaultAnchorIfNeeded()
         restoreSessionIfNeeded()
-        releaseHotKey = ReleaseHotKey { [weak self] in
+        releaseHotKey = ReleaseHotKey.register { [weak self] in
             self?.releaseSession()
+        }
+        releaseHotKeyDisplayName = releaseHotKey?.displayName
+        if !hasCompletedOnboarding {
+            firstLaunchWindow = FirstLaunchWindowController(coordinator: self)
+            firstLaunchWindow?.present()
         }
     }
 
@@ -82,19 +88,23 @@ final class LeashCoordinator: NSObject, ObservableObject {
         return SessionEngine.remainingText(for: session, now: now)
     }
 
-    var accessibilityTrusted: Bool {
-        AXIsProcessTrusted()
+    var selectedAnchorIsBrowser: Bool {
+        selectedAnchor?.isWebBrowser == true
     }
 
-    func requestAccessibility() {
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-        _ = AXIsProcessTrustedWithOptions(options)
+    var currentAppToAllow: AppIdentity? {
+        guard let session,
+              let running = workspace.frontmostApplication,
+              let app = identity(for: running),
+              app.bundleIdentifier != leashBundleIdentifier,
+              !session.allowedBundleIdentifiers.contains(app.bundleIdentifier) else { return nil }
+        return app
     }
 
-    func finishOnboarding(requestAccessibility: Bool) {
+    func finishOnboarding() {
         store.completeOnboarding()
         hasCompletedOnboarding = true
-        if requestAccessibility { self.requestAccessibility() }
+        firstLaunchWindow?.showSetup()
     }
 
     func toggleAllowed(_ app: AppIdentity) {
@@ -142,6 +152,8 @@ final class LeashCoordinator: NSObject, ObservableObject {
                 task: nextSession.task,
                 remaining: SessionEngine.remainingText(for: nextSession)
             )
+            firstLaunchWindow?.close()
+            firstLaunchWindow = nil
         } catch {
             formError = error.localizedDescription
         }
@@ -154,7 +166,7 @@ final class LeashCoordinator: NSObject, ObservableObject {
         stopClock()
         timeboxEnded = false
         isPullingBack = false
-        selectDefaultAnchorIfNeeded()
+        validateSelectedAnchor()
     }
 
     func releaseSession() {
@@ -178,11 +190,12 @@ final class LeashCoordinator: NSObject, ObservableObject {
         save()
         stopClock()
         timeboxEnded = false
+        isPullingBack = false
         taskDraft = ""
         doneWhenDraft = ""
         selectedBundleIdentifiers.removeAll()
+        selectedAnchorBundleIdentifier = nil
         overlay.showCompletion(task: session.task)
-        selectDefaultAnchorIfNeeded()
     }
 
     func toggleFinishLineItem(_ item: FinishLineItem) {
@@ -208,17 +221,28 @@ final class LeashCoordinator: NSObject, ObservableObject {
 
     func returnToTask() {
         guard let anchor = state.session?.anchor else { return }
-        activate(anchor)
+        if !activate(anchor) { endSession(reason: "anchor-closed") }
     }
 
     func allowCurrentApp() {
         guard var session = state.session,
-              let running = workspace.frontmostApplication,
-              let app = identity(for: running),
-              app.bundleIdentifier != leashBundleIdentifier else { return }
+              let app = currentAppToAllow else { return }
+        if !session.allowedBundleIdentifiers.contains(app.bundleIdentifier),
+           session.allowedBundleIdentifiers.count >= InputLimits.allowedAppCount {
+            return
+        }
         session.allowedBundleIdentifiers.insert(app.bundleIdentifier)
         state.session = session
         save()
+    }
+
+    func openParked(_ item: ParkedApp) {
+        guard activate(item.app) else { return }
+        removeParked(item)
+    }
+
+    func canOpenParked(_ item: ParkedApp) -> Bool {
+        runningApplication(for: item.app) != nil
     }
 
     func removeParked(_ item: ParkedApp) {
@@ -253,7 +277,6 @@ final class LeashCoordinator: NSObject, ObservableObject {
 
         SessionEngine.park(
             app: app,
-            windowTitle: focusedWindowTitle(for: application.processIdentifier),
             state: &state
         )
         save()
@@ -278,8 +301,11 @@ final class LeashCoordinator: NSObject, ObservableObject {
                 self.isPullingBack = false
                 return
             }
+            guard self.activate(session.anchor) else {
+                self.endSession(reason: "anchor-closed")
+                return
+            }
             application.hide()
-            self.activate(session.anchor)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                 self.isPullingBack = false
             }
@@ -293,16 +319,17 @@ final class LeashCoordinator: NSObject, ObservableObject {
     @objc private func applicationTerminated(_ notification: Notification) {
         refreshRunningApps()
         guard let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-              let app = identity(for: application),
-              let session = state.session,
-              SessionEngine.shouldRelease(session: session, terminatedApp: app) else { return }
-        endSession(reason: "anchor-closed")
+              let app = identity(for: application) else { return }
+        if let session = state.session,
+           SessionEngine.shouldRelease(session: session, terminatedApp: app) {
+            endSession(reason: "anchor-closed")
+        }
     }
 
     private func startClock() {
         guard clock == nil else { return }
         now = Date()
-        clock = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+        clock = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.tick() }
         }
         if let clock { RunLoop.main.add(clock, forMode: .common) }
@@ -314,8 +341,11 @@ final class LeashCoordinator: NSObject, ObservableObject {
     }
 
     private func tick() {
+        guard let session = state.session else {
+            stopClock()
+            return
+        }
         now = Date()
-        guard let session = state.session else { return }
         if SessionEngine.isExpired(session, now: now) {
             stopClock()
             timeboxEnded = true
@@ -334,7 +364,9 @@ final class LeashCoordinator: NSObject, ObservableObject {
 
     private func restoreSessionIfNeeded() {
         guard let session = state.session else { return }
-        if SessionEngine.isExpired(session) {
+        if runningApplication(for: session.anchor) == nil {
+            endSession(reason: "anchor-closed")
+        } else if SessionEngine.isExpired(session) {
             endSession(reason: "time-ended")
         } else {
             overlay.start(task: session.task, remaining: SessionEngine.remainingText(for: session))
@@ -342,15 +374,12 @@ final class LeashCoordinator: NSObject, ObservableObject {
         }
     }
 
-    private func selectDefaultAnchorIfNeeded() {
+    private func validateSelectedAnchor() {
         if let selectedAnchorBundleIdentifier,
            runningApps.contains(where: { $0.bundleIdentifier == selectedAnchorBundleIdentifier }) {
             return
         }
-        let frontmost = workspace.frontmostApplication.flatMap(identity(for:))
-        selectedAnchorBundleIdentifier = frontmost.flatMap { frontmost in
-            runningApps.first { $0.bundleIdentifier == frontmost.bundleIdentifier }?.bundleIdentifier
-        } ?? runningApps.first?.bundleIdentifier
+        selectedAnchorBundleIdentifier = nil
     }
 
     private func refreshRunningApps() {
@@ -363,7 +392,7 @@ final class LeashCoordinator: NSObject, ObservableObject {
             }
             .values
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        selectDefaultAnchorIfNeeded()
+        validateSelectedAnchor()
     }
 
     private func finishLineStatus(for session: FocusSession) -> String? {
@@ -376,40 +405,22 @@ final class LeashCoordinator: NSObject, ObservableObject {
 
     private func identity(for application: NSRunningApplication) -> AppIdentity? {
         guard let bundleIdentifier = application.bundleIdentifier,
-              let name = application.localizedName,
-              !name.isEmpty else { return nil }
-        return AppIdentity(bundleIdentifier: bundleIdentifier, name: name)
+              let name = application.localizedName else { return nil }
+        let identity = AppIdentity(bundleIdentifier: bundleIdentifier, name: name)
+        guard !identity.bundleIdentifier.isEmpty, !identity.name.isEmpty else { return nil }
+        return identity
     }
 
-    private func activate(_ app: AppIdentity) {
-        let candidates = NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleIdentifier)
-        guard let application = candidates.first else {
-            if let url = workspace.urlForApplication(withBundleIdentifier: app.bundleIdentifier) {
-                workspace.openApplication(at: url, configuration: .init())
-            }
-            return
-        }
+    private func runningApplication(for app: AppIdentity) -> NSRunningApplication? {
+        NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleIdentifier)
+            .first { !$0.isTerminated }
+    }
+
+    @discardableResult
+    private func activate(_ app: AppIdentity) -> Bool {
+        guard let application = runningApplication(for: app) else { return false }
         application.activate(options: [.activateAllWindows])
-    }
-
-    private func focusedWindowTitle(for processIdentifier: pid_t) -> String? {
-        guard AXIsProcessTrusted() else { return nil }
-        let application = AXUIElementCreateApplication(processIdentifier)
-        var focusedWindow: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            application,
-            kAXFocusedWindowAttribute as CFString,
-            &focusedWindow
-        ) == .success,
-        let focusedWindow else { return nil }
-
-        var title: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            focusedWindow as! AXUIElement,
-            kAXTitleAttribute as CFString,
-            &title
-        ) == .success else { return nil }
-        return title as? String
+        return true
     }
 
     private func save() {

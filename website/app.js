@@ -8,8 +8,19 @@ const priceTotal = document.querySelector("#price-total");
 const purchaseButton = document.querySelector("#purchase-button");
 const formStatus = document.querySelector("#form-status");
 const countdown = document.querySelector("#countdown");
+const countdownPanel = document.querySelector(".countdown");
+const pricingTitle = document.querySelector("#pricing-title");
+const pricingCopy = document.querySelector("#pricing-copy");
+const releaseStatus = document.querySelector("#release-status");
+const compatibility = document.querySelector("#compatibility");
+const fieldset = priceForm.querySelector("fieldset");
+const customPrice = priceForm.querySelector(".custom-price");
+const purchaseSummaryLabel = document.querySelector(".purchase-summary > span");
+const purchaseSucceeded = new URLSearchParams(window.location.search).get("purchase") === "success";
 
 let selectedAmount = STANDARD_PRICE;
+let downloadAvailable = false;
+let paidCheckoutAvailable = false;
 
 function setStatus(message = "", type = "error") {
   formStatus.textContent = message;
@@ -21,7 +32,7 @@ function syncPrice(amount) {
   selectedAmount = normalizeAmount(amount, launchActive);
   priceTotal.textContent = `€${selectedAmount}`;
   purchaseButton.textContent = selectedAmount === 0
-    ? "Download for €0"
+    ? "Download Leash"
     : `Pay €${selectedAmount} and download`;
   purchaseButton.disabled = false;
 
@@ -33,19 +44,72 @@ function syncPrice(amount) {
 }
 
 function expireLaunchPricing() {
-  const fieldset = priceForm.querySelector("fieldset");
-  const customPrice = priceForm.querySelector(".custom-price");
   fieldset.hidden = true;
   customPrice.hidden = true;
-  document.querySelector(".pricing-intro > p:not(.section-number)").textContent =
-    "Launch week is over. Leash is now a one-time €12 purchase.";
-  syncPrice(STANDARD_PRICE);
+  pricingCopy.textContent = "Launch week is over. Leash is now a one-time €12 purchase.";
+  if (paidCheckoutAvailable) syncPrice(STANDARD_PRICE);
 }
 
 function updateCountdown() {
   countdown.textContent = formatCountdown();
-  if (!isLaunchActive()) {
-    expireLaunchPricing();
+  if (!isLaunchActive()) expireLaunchPricing();
+}
+
+function pauseDownloads(message = "Release status could not be checked. Try again shortly.") {
+  downloadAvailable = false;
+  paidCheckoutAvailable = false;
+  priceForm.hidden = true;
+  releaseStatus.hidden = false;
+  countdownPanel.hidden = true;
+  pricingTitle.textContent = "The public build is being signed.";
+  pricingCopy.textContent = "Leash is ready on the Mac. The download opens after Apple accepts the installer.";
+  compatibility.textContent = message;
+}
+
+function enableFreeDownload() {
+  fieldset.disabled = false;
+  for (const button of optionButtons) {
+    button.hidden = Number(button.dataset.amount) !== 0;
+  }
+  customPrice.hidden = true;
+  purchaseSummaryLabel.textContent = "Your download";
+  syncPrice(0);
+}
+
+async function loadReleaseStatus() {
+  try {
+    const response = await fetch("/api/config", { headers: { Accept: "application/json" } });
+    const config = await response.json().catch(() => ({}));
+    if (!response.ok || !config.downloadAvailable) {
+      pauseDownloads("Public download paused until Apple notarization is complete.");
+      return;
+    }
+
+    downloadAvailable = true;
+    paidCheckoutAvailable = Boolean(config.paidCheckoutAvailable);
+    priceForm.hidden = false;
+    releaseStatus.hidden = true;
+    priceForm.setAttribute("aria-busy", "false");
+    fieldset.disabled = false;
+    purchaseButton.disabled = false;
+    compatibility.innerHTML = `Requires macOS 14 or later. <a href="${DOWNLOAD_URL}.sha256">Verify SHA-256</a>`;
+
+    if (purchaseSucceeded) {
+      setStatus("Thank you. Your download is starting now.", "success");
+      window.setTimeout(() => window.location.assign(DOWNLOAD_URL), 700);
+    }
+
+    if (paidCheckoutAvailable) {
+      syncPrice(STANDARD_PRICE);
+    } else if (isLaunchActive()) {
+      pricingTitle.textContent = "Download Leash free.";
+      pricingCopy.textContent = "Paid checkout is offline. The app is the same complete build.";
+      enableFreeDownload();
+    } else {
+      pauseDownloads("Paid checkout is temporarily unavailable.");
+    }
+  } catch {
+    pauseDownloads();
   }
 }
 
@@ -74,11 +138,18 @@ priceForm.addEventListener("submit", async (event) => {
   setStatus();
 
   try {
+    if (!downloadAvailable) {
+      throw new Error("The public download is not available yet.");
+    }
     const amount = normalizeAmount(selectedAmount, isLaunchActive());
 
     if (amount === 0) {
       window.location.assign(DOWNLOAD_URL);
       return;
+    }
+
+    if (!paidCheckoutAvailable) {
+      throw new Error("Paid checkout is temporarily unavailable.");
     }
 
     purchaseButton.disabled = true;
@@ -97,19 +168,11 @@ priceForm.addEventListener("submit", async (event) => {
 
     window.location.assign(payload.url);
   } catch (error) {
-    const fallback = isLaunchActive() ? " You can still choose €0 during launch week." : "";
-    setStatus(`${error.message}${fallback}`);
+    setStatus(error.message);
     syncPrice(selectedAmount);
-    purchaseButton.disabled = false;
   }
 });
 
-const query = new URLSearchParams(window.location.search);
-if (query.get("purchase") === "success") {
-  setStatus("Thank you. Your download is starting now.", "success");
-  window.setTimeout(() => window.location.assign(DOWNLOAD_URL), 700);
-}
-
-syncPrice(STANDARD_PRICE);
 updateCountdown();
 window.setInterval(updateCountdown, 1000);
+loadReleaseStatus();

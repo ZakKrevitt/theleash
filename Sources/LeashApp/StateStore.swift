@@ -4,6 +4,7 @@ import LeashCore
 struct StateStore {
     private let key = "leash.state.v1"
     private let onboardingKey = "leash.onboarding.completed.v1"
+    private let maximumStateSize = 256 * 1_024
     private let defaults: UserDefaults
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -13,15 +14,27 @@ struct StateStore {
     }
 
     func load() -> LeashState {
-        guard let data = defaults.data(forKey: key),
-              let state = try? decoder.decode(LeashState.self, from: data) else {
+        guard let data = defaults.data(forKey: key) else {
             return LeashState()
         }
-        return state
+        guard data.count <= maximumStateSize,
+              let state = try? decoder.decode(LeashState.self, from: data) else {
+            defaults.removeObject(forKey: key)
+            return LeashState()
+        }
+
+        let restored = SessionEngine.restoredState(from: state)
+        if let normalizedData = try? encoder.encode(restored),
+           normalizedData != data {
+            defaults.set(normalizedData, forKey: key)
+        }
+        return restored
     }
 
     func save(_ state: LeashState) {
-        guard let data = try? encoder.encode(state) else { return }
+        let persistentState = SessionEngine.persistentState(from: state)
+        guard let data = try? encoder.encode(persistentState),
+              data.count <= maximumStateSize else { return }
         defaults.set(data, forKey: key)
     }
 

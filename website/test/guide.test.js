@@ -25,12 +25,15 @@ test("site footer links to the user guide", async () => {
   assert.match(index, /href="\/guide\.html">Guide<\/a>/);
 });
 
-test("website downloads the DMG installer", async () => {
+test("website gates the DMG installer on release status", async () => {
   const [app, index] = await Promise.all([
     readFile(appUrl, "utf8"),
     readFile(indexUrl, "utf8"),
   ]);
 
   assert.match(app, /DOWNLOAD_URL = "\/download\/Leash-macOS-v0\.1\.0\.dmg"/);
-  assert.match(index, /href="\/download\/Leash-macOS-v0\.1\.0\.dmg\.sha256"/);
+  assert.match(app, /fetch\("\/api\/config"/);
+  assert.match(index, /id="release-status"/);
+  assert.match(index, /Downloads open only for a Developer ID signed and notarized release/);
+  assert.doesNotMatch(index, /href="\/download\/Leash-macOS-v0\.1\.0\.dmg/);
 });

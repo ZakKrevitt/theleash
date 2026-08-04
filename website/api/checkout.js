@@ -26,6 +26,11 @@ export default async function handler(request, response) {
     return;
   }
 
+  if (process.env.LEASH_DOWNLOADS_ENABLED !== "true") {
+    sendJson(response, 503, { error: "The public download is not available yet." });
+    return;
+  }
+
   if (!process.env.STRIPE_SECRET_KEY) {
     sendJson(response, 503, { error: "Paid checkout is not connected yet." });
     return;

@@ -33,7 +33,7 @@
           <thead><tr><th>Data</th><th>Why it is used</th><th>Where it is stored</th><th>Sent anywhere</th></tr></thead>
           <tbody>
             <tr><td>Task and optional completion text</td><td>Shows the task and restores an interrupted session</td><td>Local macOS preferences</td><td>Never</td></tr>
-            <tr><td>App name and bundle identifier</td><td>Recognizes allowed apps and lists caught apps in Later</td><td>Local macOS preferences</td><td>Never</td></tr>
+            <tr><td>App name and bundle identifier</td><td>Recognizes allowed apps and lists caught apps in Caught Apps</td><td>Local macOS preferences</td><td>Never</td></tr>
             <tr><td>Duration, mode, and catch count</td><td>Enforces and restores the current session</td><td>Local macOS preferences</td><td>Never</td></tr>
           </tbody>
         </table>
@@ -41,8 +41,8 @@
       <p>Leash does not request Accessibility permission. It does not read window titles, URLs, page contents, document contents, screenshots, clipboard data, or keystrokes. It does not collect browsing history.</p>
 
       <h2>Storage</h2>
-      <p>The current session and Later app identities are stored locally in macOS UserDefaults so they can survive an app restart. This data is available only to processes running as your macOS user and is never shared with the developer or third parties by Leash.</p>
-      <p>You can clear the Later list inside Leash. Removing the application and its preferences deletes the remaining local data.</p>
+      <p>The current session and Caught Apps identities are stored locally in macOS UserDefaults so they can survive an app restart. This data is available only to processes running as your macOS user and is never shared with the developer or third parties by Leash.</p>
+      <p>You can clear Caught Apps inside Leash. Removing the application and its preferences deletes the remaining local data.</p>
 
       <h2>Network and diagnostics</h2>
       <p>Leash contains no network client, analytics endpoint, telemetry SDK, advertising SDK, or automatic crash reporter. It does not log task text or app activity. If you choose to email a support report, only the information you put in that message is received by the developer.</p>

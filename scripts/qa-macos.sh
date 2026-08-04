@@ -20,7 +20,18 @@ trap cleanup EXIT
 
 cd "$PROJECT_ROOT"
 
+forbidden_source_pattern='import (Network|OSLog)|URLSession|NW(Connection|Listener|Browser|PathMonitor)|CFStreamCreate|CFSocketCreate|socket\(|Logger\(|os_log\(|NSLog\(|print\(|Telemetry|Analytics|Sentry|Crashlytics|Mixpanel|Amplitude|PostHog|Segment'
+if rg -n "$forbidden_source_pattern" Sources --glob '*.swift'; then
+    echo "Privacy gate found networking, telemetry, or activity logging code." >&2
+    exit 1
+fi
+if rg -n '\.package[[:space:]]*\(' Package.swift; then
+    echo "Privacy gate found an external Swift package dependency." >&2
+    exit 1
+fi
+
 swift test
+swift build -c release -Xswiftc -warnings-as-errors
 "$PROJECT_ROOT/scripts/package-macos.sh"
 
 lipo "$EXECUTABLE" -verify_arch arm64 x86_64
@@ -30,6 +41,15 @@ plutil -lint "$APP_DIR/Contents/Info.plist"
 [[ "$(plutil -extract CFBundleIdentifier raw "$APP_DIR/Contents/Info.plist")" == "com.zakkrevitt.leash" ]]
 [[ "$(plutil -extract LSUIElement raw "$APP_DIR/Contents/Info.plist")" == "true" ]]
 [[ "$(plutil -extract LSMinimumSystemVersion raw "$APP_DIR/Contents/Info.plist")" == "14.0" ]]
+if plutil -extract NSAccessibilityUsageDescription raw "$APP_DIR/Contents/Info.plist" >/dev/null 2>&1; then
+    echo "Packaged app declares an Accessibility permission it does not use." >&2
+    exit 1
+fi
+expected_source_commit="$(git rev-parse --verify HEAD)"
+if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then
+    expected_source_commit="$expected_source_commit-dirty"
+fi
+[[ "$(plutil -extract LeashSourceCommit raw "$APP_DIR/Contents/Info.plist")" == "$expected_source_commit" ]]
 
 (
     cd "$PROJECT_ROOT/dist"
@@ -51,7 +71,7 @@ codesign --verify --deep --strict --verbose=2 "$MOUNT_DIR/Leash.app"
 cleanup
 MOUNT_DIR=""
 
-if rg -n $'\u2014' Sources Tests scripts Support README.md PRIVACY.md RELEASE_CHECKLIST.md CHANGELOG.md website/guide.html website/index.html website/test/guide.test.js; then
+if rg -n $'\u2014' Sources Tests scripts Support README.md PRIVACY.md RELEASE_CHECKLIST.md CHANGELOG.md SECURITY.md ADHD-Leash-threat-model.md website/guide.html website/index.html website/test/guide.test.js; then
     echo "Release text contains a forbidden em dash." >&2
     exit 1
 fi

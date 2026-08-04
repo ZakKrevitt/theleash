@@ -18,7 +18,7 @@ Control-Option-Command-L releases an active leash from anywhere on the computer.
 
 ### Catch me
 
-Leash notices an unrelated app, shows what happened beside the cursor, and saves the distraction in Later. The prompt repeats your finish line and asks whether it is true. Checklist sessions can finish only after every step is checked.
+Leash notices an unrelated app, shows what happened beside the cursor, and saves the app in Caught Apps. The prompt repeats your finish line and asks whether it is true. Checklist sessions can finish only after every step is checked.
 
 ### Pull me back
 
@@ -62,11 +62,13 @@ LEASH_NOTARY_PROFILE="leash-notary" \
 
 The script outputs a notarized DMG installer, a ZIP fallback, and SHA-256 checksums in `dist/`. See `RELEASE_CHECKLIST.md` before publishing.
 
+Official releases are built from a clean `v<version>` Git tag, signed by Apple Team ID `QWT6LQP2GH`, and embed the exact source commit in `LeashSourceCommit`. See `SECURITY.md` for verification commands.
+
 ## Permissions and privacy
 
-App-level enforcement works without special permissions. Accessibility permission is optional and lets Leash add the focused window title to Later, which gives you a more useful record of where you wandered.
+Leash works without special permissions. It observes app-level activation through macOS workspace events and does not request Accessibility access.
 
-Leash stores the current session and Later list in local `UserDefaults`. It does not take screenshots, read page contents, use analytics, create an account, or send data over the network.
+Leash stores the current session and Caught Apps identities in local `UserDefaults`. It does not read window titles, URLs, page contents, documents, screenshots, clipboard data, or keystrokes. It has no analytics, telemetry, crash reporter, account, or network client. See `PRIVACY.md` for the complete data inventory.
 
 ## Current boundary
 

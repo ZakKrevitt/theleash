@@ -28,7 +28,5 @@
     <string>14.0</string>
     <key>LSUIElement</key>
     <true/>
-    <key>NSAccessibilityUsageDescription</key>
-    <string>Leash uses Accessibility permission to remember the focused window when you drift. App-level focus enforcement works without it.</string>
 </dict>
 </plist>

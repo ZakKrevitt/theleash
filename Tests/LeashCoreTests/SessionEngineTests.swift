@@ -5,6 +5,15 @@ final class SessionEngineTests: XCTestCase {
     private let anchor = AppIdentity(bundleIdentifier: "com.apple.TextEdit", name: "TextEdit")
     private let browser = AppIdentity(bundleIdentifier: "com.google.Chrome", name: "Google Chrome")
 
+    func testBrowserIdentityRecognizesReleaseChannelsWithoutFlaggingOtherApps() {
+        XCTAssertTrue(browser.isWebBrowser)
+        XCTAssertTrue(AppIdentity(
+            bundleIdentifier: "org.mozilla.firefoxdeveloperedition",
+            name: "Firefox Developer Edition"
+        ).isWebBrowser)
+        XCTAssertFalse(anchor.isWebBrowser)
+    }
+
     func testStartCreatesTaskContractAndIncludesAnchor() throws {
         let now = Date(timeIntervalSince1970: 1_000)
         let session = try SessionEngine.start(
@@ -67,6 +76,24 @@ final class SessionEngineTests: XCTestCase {
         XCTAssertTrue(try SessionEngine.canComplete(XCTUnwrap(state.session)))
     }
 
+    func testChecklistSurvivesPersistentStateNormalization() throws {
+        let session = try SessionEngine.start(
+            task: "Ship the brief",
+            durationMinutes: 25,
+            mode: .nudge,
+            anchor: anchor,
+            finishLineItems: ["Draft written", "Sent to Maya"]
+        )
+        var state = LeashState(session: session)
+        let firstItem = try XCTUnwrap(session.finishLineItems?.first)
+        SessionEngine.toggleFinishLineItem(id: firstItem.id, state: &state)
+
+        let persistent = SessionEngine.persistentState(from: state)
+
+        XCTAssertEqual(persistent.session?.finishLineItems?.map(\.text), ["Draft written", "Sent to Maya"])
+        XCTAssertEqual(persistent.session?.finishLineItems?.map(\.isComplete), [true, false])
+    }
+
     func testExtendingExpiredSessionStartsANewTimeboxFromNow() throws {
         let now = Date(timeIntervalSince1970: 2_000)
         var session = try SessionEngine.start(
@@ -119,8 +146,8 @@ final class SessionEngineTests: XCTestCase {
         var state = LeashState(session: session)
         let distraction = AppIdentity(bundleIdentifier: "com.spotify.client", name: "Spotify")
 
-        SessionEngine.park(app: distraction, windowTitle: "Playlist", state: &state)
-        SessionEngine.park(app: distraction, windowTitle: "Playlist", state: &state)
+        SessionEngine.park(app: distraction, state: &state)
+        SessionEngine.park(app: distraction, state: &state)
 
         XCTAssertEqual(state.session?.catchCount, 2)
         XCTAssertEqual(state.parked.count, 1)
@@ -167,5 +194,115 @@ final class SessionEngineTests: XCTestCase {
 
         XCTAssertTrue(SessionEngine.shouldRelease(session: session, terminatedApp: anchor))
         XCTAssertFalse(SessionEngine.shouldRelease(session: session, terminatedApp: browser))
+    }
+
+    func testStartBoundsUserControlledText() throws {
+        let session = try SessionEngine.start(
+            task: String(repeating: "a", count: InputLimits.taskLength + 20),
+            doneWhen: String(repeating: "b", count: InputLimits.doneWhenLength + 20),
+            durationMinutes: 25,
+            mode: .nudge,
+            anchor: anchor
+        )
+
+        XCTAssertEqual(session.task.count, InputLimits.taskLength)
+        XCTAssertEqual(session.doneWhen.count, InputLimits.doneWhenLength)
+    }
+
+    func testStartBoundsAllowedAppsAndAlwaysIncludesAnchor() throws {
+        let allowed = Set((0..<200).map { "app.\($0)" })
+
+        let session = try SessionEngine.start(
+            task: "Work",
+            durationMinutes: 25,
+            mode: .nudge,
+            anchor: anchor,
+            allowedBundleIdentifiers: allowed
+        )
+
+        XCTAssertLessThanOrEqual(session.allowedBundleIdentifiers.count, InputLimits.allowedAppCount)
+        XCTAssertTrue(session.allowedBundleIdentifiers.contains(anchor.bundleIdentifier))
+    }
+
+    func testParkedStateJSONContainsNoWindowOrDocumentContent() throws {
+        let session = try SessionEngine.start(
+            task: "Work", durationMinutes: 25, mode: .nudge, anchor: anchor
+        )
+        var state = LeashState(session: session)
+
+        SessionEngine.park(app: browser, state: &state)
+        let data = try JSONEncoder().encode(state.parked[0])
+        let json = try XCTUnwrap(String(data: data, encoding: .utf8))
+
+        XCTAssertFalse(json.localizedCaseInsensitiveContains("window"))
+        XCTAssertFalse(json.localizedCaseInsensitiveContains("document"))
+        XCTAssertFalse(json.localizedCaseInsensitiveContains("content"))
+    }
+
+    func testEndingSessionKeepsOnlyAppLevelHistory() throws {
+        let session = try SessionEngine.start(
+            task: "Work", durationMinutes: 25, mode: .nudge, anchor: anchor
+        )
+        let parked = ParkedApp(app: browser)
+        var completedState = LeashState(session: session, parked: [parked])
+        var releasedState = LeashState(session: session, parked: [parked])
+
+        SessionEngine.complete(state: &completedState)
+        SessionEngine.release(state: &releasedState, reason: "stopped")
+
+        XCTAssertEqual(completedState.parked.first?.app, browser)
+        XCTAssertEqual(releasedState.parked.first?.app, browser)
+    }
+
+    func testPersistentStateBoundsHistory() {
+        let parked = (0..<75).map { index in
+            ParkedApp(app: AppIdentity(bundleIdentifier: "app.\(index)", name: "App \(index)"))
+        }
+
+        let persistent = SessionEngine.persistentState(from: LeashState(parked: parked))
+
+        XCTAssertEqual(persistent.parked.count, InputLimits.parkedItemCount)
+    }
+
+    func testRestoreRejectsStructurallyInvalidSession() {
+        let now = Date(timeIntervalSince1970: 10_000)
+        let invalid = FocusSession(
+            task: "Work",
+            doneWhen: "",
+            mode: .lock,
+            startedAt: now,
+            endsAt: now.addingTimeInterval(4 * 60 * 60),
+            anchor: anchor,
+            allowedBundleIdentifiers: [anchor.bundleIdentifier]
+        )
+
+        let restored = SessionEngine.restoredState(from: LeashState(session: invalid), now: now)
+
+        XCTAssertNil(restored.session)
+        XCTAssertEqual(restored.lastStopReason, "invalid-state")
+    }
+
+    func testRestoreBoundsAllowedAppsAndCatchCount() {
+        let now = Date(timeIntervalSince1970: 10_000)
+        let allowed = Set((0..<200).map { "app.\($0)" })
+        let session = FocusSession(
+            task: "Work",
+            doneWhen: "",
+            mode: .lock,
+            startedAt: now,
+            endsAt: now.addingTimeInterval(60),
+            anchor: anchor,
+            allowedBundleIdentifiers: allowed,
+            catchCount: Int.max
+        )
+
+        let restored = SessionEngine.restoredState(from: LeashState(session: session), now: now)
+
+        XCTAssertLessThanOrEqual(
+            restored.session?.allowedBundleIdentifiers.count ?? 0,
+            InputLimits.allowedAppCount
+        )
+        XCTAssertEqual(restored.session?.catchCount, 1_000_000)
+        XCTAssertTrue(restored.session?.allowedBundleIdentifiers.contains(anchor.bundleIdentifier) == true)
     }
 }
