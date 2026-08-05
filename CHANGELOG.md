@@ -4,6 +4,7 @@
 
 - Added the MIT License and public contribution guidelines.
 - Added GitHub issue forms, a pull request template, and continuous integration.
+- Added mandatory code ownership, dependency review, CodeQL scanning, and a maintainer security checklist for outside contributions.
 - Expanded source and binary privacy gates against network, cloud, web view, telemetry, and common shell-execution APIs.
 - Clarified that public source code cannot access data from installed copies.
 - Clarified that website payments support development and the official signed download, while source code remains free under MIT.

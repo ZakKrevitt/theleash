@@ -1,0 +1,7 @@
+# The maintainer reviews every change, with extra attention on runtime and release paths.
+* @ZakKrevitt
+/.github/ @ZakKrevitt
+/Sources/ @ZakKrevitt
+/Support/ @ZakKrevitt
+/Package.swift @ZakKrevitt
+/scripts/ @ZakKrevitt
