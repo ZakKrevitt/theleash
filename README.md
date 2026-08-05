@@ -100,7 +100,7 @@ cd website && npm test
 
 The session engine is isolated in `LeashCore` and covered by unit tests. The menu bar app and overlay use SwiftUI and AppKit with no third-party dependencies.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or pull request. Security vulnerabilities should be reported privately according to [SECURITY.md](SECURITY.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or pull request. Maintainers review outside contributions with [OPEN_SOURCE_CHECKLIST.md](OPEN_SOURCE_CHECKLIST.md). Security vulnerabilities should be reported privately according to [SECURITY.md](SECURITY.md).
 
 ## License and official builds
 

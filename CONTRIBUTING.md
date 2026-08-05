@@ -46,4 +46,10 @@ cd website && npm test
 
 The QA script tests the session engine, builds a warnings-as-errors universal app, checks privacy constraints, validates the app bundle, and verifies the local DMG and ZIP.
 
+When you open a pull request, GitHub gives its workflows read-only repository access and no release or deployment credentials. The maintainer reviews workflow changes before allowing code from an outside contributor to run. Quality, dependency, and CodeQL checks then run against the proposed commit. Passing checks do not guarantee acceptance. The code owner reviews the complete diff and may request a smaller change or additional evidence before merging.
+
+Submitting a pull request does not grant repository, release, deployment, or user-data access. Contributors never gain access to data from installed copies because Leash has no user service or remote data store.
+
+Maintainers follow [OPEN_SOURCE_CHECKLIST.md](OPEN_SOURCE_CHECKLIST.md) for every outside contribution.
+
 By contributing, you agree that your contribution is licensed under the [MIT License](LICENSE).
