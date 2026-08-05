@@ -29,7 +29,7 @@ test("landing page explains the open-source download model", async () => {
   const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
 
   assert.match(index, /source code is free under MIT/);
-  assert.match(index, /github\.com\/ZakKrevitt\/theleash/);
+  assert.ok(index.includes("github.com/ZakKrevitt/theleash"));
   assert.match(app, /source code stays free under MIT/);
   assert.doesNotMatch(index, /source code license/i);
 });
