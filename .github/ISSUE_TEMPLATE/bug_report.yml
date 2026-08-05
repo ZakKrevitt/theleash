@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a reproducible problem with Leash.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report a problem. Do not include task text, credentials, or other private data.
+  - type: input
+    id: version
+    attributes:
+      label: Leash version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and Mac type
+      placeholder: macOS 15.6 on Apple Silicon
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the behavior without including private task content.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Start a session with placeholder text.
+        2. Switch to another app.
+        3. Observe the result.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: security
+    attributes:
+      label: Security check
+      options:
+        - label: This report does not describe a security vulnerability. I will report security issues privately using SECURITY.md.
+          required: true

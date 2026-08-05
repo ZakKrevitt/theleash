@@ -20,7 +20,7 @@ trap cleanup EXIT
 
 cd "$PROJECT_ROOT"
 
-forbidden_source_pattern='import (Network|OSLog)|URLSession|NW(Connection|Listener|Browser|PathMonitor)|CFStreamCreate|CFSocketCreate|socket\(|Logger\(|os_log\(|NSLog\(|print\(|Telemetry|Analytics|Sentry|Crashlytics|Mixpanel|Amplitude|PostHog|Segment'
+forbidden_source_pattern='import (Network|OSLog|WebKit|CloudKit)|URLSession|NSURLConnection|NW(Connection|Listener|Browser|PathMonitor)|CFStreamCreate|CFSocketCreate|socket\(|WKWebView|CKContainer|Process\(|NSTask|NSAppleScript|NSXPCConnection|(^|[[:space:];={])(system|popen|posix_spawn)\(|Logger\(|os_log\(|NSLog\(|print\(|Telemetry|Analytics|Sentry|Crashlytics|Mixpanel|Amplitude|PostHog|Segment'
 if rg -n "$forbidden_source_pattern" Sources --glob '*.swift'; then
     echo "Privacy gate found networking, telemetry, or activity logging code." >&2
     exit 1
@@ -37,6 +37,11 @@ swift build -c release -Xswiftc -warnings-as-errors
 lipo "$EXECUTABLE" -verify_arch arm64 x86_64
 codesign --verify --deep --strict --verbose=2 "$APP_DIR"
 plutil -lint "$APP_DIR/Contents/Info.plist"
+
+if nm -u "$EXECUTABLE" | rg -i 'URLSession|NSURLConnection|NW(Connection|Listener|Browser)|CFStreamCreate|CFSocketCreate|_socket$|_connect$|_system$|_popen$|_posix_spawn$|WKWebView|CKContainer|Telemetry|Analytics|Sentry'; then
+    echo "Privacy gate found networking, web, cloud, telemetry, or analytics symbols in the app binary." >&2
+    exit 1
+fi
 
 [[ "$(plutil -extract CFBundleIdentifier raw "$APP_DIR/Contents/Info.plist")" == "com.zakkrevitt.leash" ]]
 [[ "$(plutil -extract LSUIElement raw "$APP_DIR/Contents/Info.plist")" == "true" ]]
@@ -71,7 +76,7 @@ codesign --verify --deep --strict --verbose=2 "$MOUNT_DIR/Leash.app"
 cleanup
 MOUNT_DIR=""
 
-if rg -n $'\u2014' Sources Tests scripts Support README.md PRIVACY.md RELEASE_CHECKLIST.md CHANGELOG.md SECURITY.md ADHD-Leash-threat-model.md website/guide.html website/index.html website/test/guide.test.js; then
+if rg -n --hidden $'\u2014' . --glob '!.git/**' --glob '!.build/**' --glob '!dist/**'; then
     echo "Release text contains a forbidden em dash." >&2
     exit 1
 fi

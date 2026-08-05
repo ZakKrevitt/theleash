@@ -33,6 +33,8 @@
 
       <h2>Data handling</h2>
       <p>Leash has no account, server, analytics, telemetry, crash reporter, or network client. Task state and app-level identities are stored only in local macOS preferences. Leash does not request Accessibility permission or read focused window titles, URLs, page contents, documents, screenshots, clipboard data, or keystrokes.</p>
+      <p>Publishing the source repository does not provide access to installed copies. There is no Leash user database, listener, sync service, or runtime connection for an attacker, maintainer, or contributor to query.</p>
+      <p>A malicious process already running as the same macOS user may be able to read or alter local preferences. Leash does not claim to protect data after the operating system account has been compromised.</p>
     </main>
   </body>
 </html>

@@ -31,3 +31,9 @@ Builds with another Team ID are unofficial forks, even if they use the same name
 ## Data handling
 
 Leash has no account, server, analytics, telemetry, crash reporter, or network client. Task state and app-level identities are stored only in local macOS preferences. Leash does not request Accessibility permission or read focused window titles, URLs, page contents, documents, screenshots, clipboard data, or keystrokes.
+
+Publishing the source repository does not provide access to installed copies. There is no Leash user database, inbound listener, sync service, or outbound runtime connection for an attacker, maintainer, or contributor to query.
+
+Local preferences are protected by the macOS user account boundary. A malicious process that is already running as the same macOS user may be able to read or alter those preferences. Leash does not claim to protect data after the user's operating system account has been compromised. Avoid putting passwords, recovery codes, or other secrets in task text.
+
+Every release must pass `./scripts/qa-macos.sh`. The script rejects networking, telemetry, activity logging, automatic crash reporting, common shell-execution APIs, web views, cloud SDKs, and external Swift packages in the Mac runtime.

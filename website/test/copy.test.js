@@ -23,3 +23,13 @@ test("public pages avoid typographic slop", async () => {
   assert.doesNotMatch(site, /<button[^>]*data-amount[^>]*>[^<]+<small>/);
   assert.doesNotMatch(site, /\u2014/);
 });
+
+test("landing page explains the open-source download model", async () => {
+  const index = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
+
+  assert.match(index, /source code is free under MIT/);
+  assert.match(index, /github\.com\/ZakKrevitt\/theleash/);
+  assert.match(app, /source code stays free under MIT/);
+  assert.doesNotMatch(index, /source code license/i);
+});

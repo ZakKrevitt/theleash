@@ -26,6 +26,12 @@ You can clear Caught Apps inside Leash. Removing the application and its prefere
 
 Leash contains no network client, analytics endpoint, telemetry SDK, advertising SDK, or automatic crash reporter. It does not log task text or app activity. If you choose to email a support report, only the information you put in that message is received by the developer.
 
+## Public source code
+
+Leash's source code is public under the MIT License. The repository contains application code, tests, documentation, and packaging tools. It does not contain data from installed copies, and publishing it does not create access to any Mac running Leash.
+
+The app has no user database or service that the developer or project contributors can query. A process that is already running as the same macOS user may be able to read that user's local preferences. Leash cannot protect data after the operating system account itself has been compromised.
+
 ## Contact
 
 Privacy and support questions can be sent to zak.krevitt@gmail.com.

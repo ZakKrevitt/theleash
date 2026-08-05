@@ -46,7 +46,7 @@ function syncPrice(amount) {
 function expireLaunchPricing() {
   fieldset.hidden = true;
   customPrice.hidden = true;
-  pricingCopy.textContent = "Launch week is over. Leash is now a one-time €12 purchase.";
+  pricingCopy.textContent = "The official signed download is €12. The source code stays free under MIT.";
   if (paidCheckoutAvailable) syncPrice(STANDARD_PRICE);
 }
 

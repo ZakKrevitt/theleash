@@ -67,6 +67,10 @@ test("checkout sends a validated euro amount to Stripe", async () => {
   assert.equal(response.body.url, "https://checkout.stripe.com/example");
   assert.equal(stripeRequest.url, "https://api.stripe.com/v1/checkout/sessions");
   assert.equal(stripeRequest.options.body.get("line_items[0][price_data][unit_amount]"), "1200");
+  assert.equal(
+    stripeRequest.options.body.get("line_items[0][price_data][product_data][description]"),
+    "Official signed Leash download and project support"
+  );
   assert.equal(stripeRequest.options.body.get("success_url"), "https://leash.example/?purchase=success");
 
   global.fetch = previousFetch;

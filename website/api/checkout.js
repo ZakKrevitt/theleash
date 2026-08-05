@@ -52,7 +52,7 @@ export default async function handler(request, response) {
       "line_items[0][price_data][currency]": "eur",
       "line_items[0][price_data][unit_amount]": String(amount * 100),
       "line_items[0][price_data][product_data][name]": "Leash for macOS",
-      "line_items[0][price_data][product_data][description]": "One-time Leash license and download",
+      "line_items[0][price_data][product_data][description]": "Official signed Leash download and project support",
     });
 
     const stripeResponse = await fetch("https://api.stripe.com/v1/checkout/sessions", {

@@ -4,6 +4,9 @@ Tell your Mac what you are doing. It keeps you there.
 
 Leash is a native, local-first macOS menu bar app for short focus sessions. It watches which app is active across the whole computer and intervenes when you switch outside the task.
 
+[![CI](https://github.com/ZakKrevitt/theleash/actions/workflows/ci.yml/badge.svg)](https://github.com/ZakKrevitt/theleash/actions/workflows/ci.yml)
+[MIT licensed](LICENSE)
+
 ## How it works
 
 1. Open Leash from the menu bar.
@@ -70,17 +73,39 @@ Leash works without special permissions. It observes app-level activation throug
 
 Leash stores the current session and Caught Apps identities in local `UserDefaults`. It does not read window titles, URLs, page contents, documents, screenshots, clipboard data, or keystrokes. It has no analytics, telemetry, crash reporter, account, or network client. See `PRIVACY.md` for the complete data inventory.
 
+Publishing this source code does not expose data from installed copies. The app has no service that can receive task or app activity. A process that has already compromised the same macOS user account may be able to read that user's local preferences, which is outside Leash's security boundary. See `SECURITY.md` and `ADHD-Leash-threat-model.md` for the verified threat model.
+
 ## Current boundary
 
 This release detects changes between macOS apps. It does not yet distinguish unrelated browser tabs inside the same browser. That requires a small browser companion or local screen classification layer. The native app is the source of truth, so either addition can extend the leash without turning it back into a browser-only product.
 
 ## Development
 
+Clone the project, run the tests, and open a local ad hoc signed build:
+
 ```bash
+git clone https://github.com/ZakKrevitt/theleash.git
+cd theleash
 swift test
-swift build -c release
 ./scripts/package-macos.sh
+open dist/Leash.app
+```
+
+Before submitting a change, run the full local checks:
+
+```bash
 ./scripts/qa-macos.sh
+cd website && npm test
 ```
 
 The session engine is isolated in `LeashCore` and covered by unit tests. The menu bar app and overlay use SwiftUI and AppKit with no third-party dependencies.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or pull request. Security vulnerabilities should be reported privately according to [SECURITY.md](SECURITY.md).
+
+## License and official builds
+
+Leash source code is available under the [MIT License](LICENSE). You may use, modify, and redistribute it under those terms.
+
+Official downloads are Developer ID signed and notarized by Apple Team ID `QWT6LQP2GH`. Payments on the Leash website support development and provide the official packaged download. Building the source yourself does not require payment.
+
+The Leash name and logo identify the official project. Forks may use the MIT-licensed code but must not claim to be official or endorsed builds.

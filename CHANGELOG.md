@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Added the MIT License and public contribution guidelines.
+- Added GitHub issue forms, a pull request template, and continuous integration.
+- Expanded source and binary privacy gates against network, cloud, web view, telemetry, and common shell-execution APIs.
+- Clarified that public source code cannot access data from installed copies.
+- Clarified that website payments support development and the official signed download, while source code remains free under MIT.
+
 ## 0.1.0
 
 - Added computer-wide task sessions with Catch me and Pull me back modes.
