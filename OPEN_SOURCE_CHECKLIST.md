@@ -14,7 +14,7 @@ Use this checklist for every outside contribution. A green automated check means
 - [x] Workflows may use only GitHub-owned actions, pinned to full commit SHAs.
 - [x] Workflows from every outside contributor require maintainer approval before they run.
 - [x] Secret scanning, push protection, Dependabot, and private vulnerability reporting are enabled.
-- [x] Quality, dependency review, and CodeQL checks are required before merge.
+- [x] Quality, dependency review, and CodeQL checks for Swift, JavaScript, and GitHub Actions are required before merge.
 - [x] Official binaries are signed, notarized, and tied to a source commit.
 
 ## When a pull request arrives
